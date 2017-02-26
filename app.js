@@ -166,6 +166,14 @@ app.use(function(req, res, next) {
     next();
 });
 
+// SSL redirect
+app.use('/*', function(req,res,next){
+	  if(req.headers['x-forwarded-proto'] !== 'https')
+	    res.redirect('https://stardust1.herokuapp.com');
+	  else
+	    next();
+});
+
 //
 // Controllers
 //
@@ -220,12 +228,7 @@ function startApp() {
 
     app.listen(port, host);
 
-	app.use(function(req,res,next){
-	  if(req.headers['x-forwarded-proto']!='https')
-	    res.redirect('https://stardust1.herokuapp.com')
-	  else
-	    next() /* Continue to other routes if we're not redirecting */
-	})
+
 
     //
     // XMPP
