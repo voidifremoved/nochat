@@ -214,6 +214,13 @@ function startApp() {
         });
         http.createServer(redirectServer)
             .listen(settings.http.port || 5000, host);
+
+		app.get('*',function(req,res,next){
+		  if(req.headers['x-forwarded-proto']!='https')
+		    res.redirect('https://stardust1.herokuapp.com')
+		  else
+		    next() /* Continue to other routes if we're not redirecting */
+		})
     }
 
     app.listen(port, host);
