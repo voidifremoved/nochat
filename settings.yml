@@ -38,3 +38,6 @@ auth:
   providers: [local]
   local:
     enableRegistration: true
+    
+rooms:
+  private: true
