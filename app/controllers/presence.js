@@ -17,7 +17,6 @@ SocketIoConnection.prototype.disconnect = function() {
 
     this.socket.conn = null;
     this.socket = null;
-    window.location = '/logout';
 };
 
 module.exports = function() {
