@@ -170,7 +170,7 @@ app.use(function(req, res, next) {
 // SSL redirect
 app.use('/*', function(req,res,next){
 	  if(req.headers['x-forwarded-proto'] !== 'https')
-	    res.redirect('https://racing1.herokuapp.com');
+	    res.redirect('https://racing1.herokuapp.com/login');
 	  else
 	    next();
 });
