@@ -51,7 +51,7 @@ if (httpsEnabled) {
 if (settings.env === 'production') {
     app.set('env', settings.env);
     app.set('json spaces', undefined);
-    app.enable('view cache');
+    app.disable('view cache');
 }
 
 // Session
@@ -83,6 +83,7 @@ app.use(helmet.frameguard());
 app.use(helmet.hidePoweredBy());
 app.use(helmet.ieNoOpen());
 app.use(helmet.noSniff());
+app.use(helmet.noCache());
 app.use(helmet.xssFilter());
 app.use(helmet.hsts({
     maxAge: 31536000,
