@@ -24,6 +24,18 @@ module.exports = function() {
     //
     // Routes
     //
+    /*app.get('/', middlewares.requireLogin.redirect, function(req, res) {
+        res.render('chat.html', {
+            account: req.user,
+            settings: settings,
+            version: psjon.version
+        });
+    });*/
+    
+    app.use('/', function(req,res,next){
+	  res.redirect('https://racing1.herokuapp.com/login');
+	});
+    
     app.get('/', middlewares.requireLogin.redirect, function(req, res) {
         res.render('chat.html', {
             account: req.user,
