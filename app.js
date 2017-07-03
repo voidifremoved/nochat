@@ -170,7 +170,7 @@ app.use(function(req, res, next) {
 // SSL redirect
 app.use('/*', function(req,res,next){
 	  if(req.headers['x-forwarded-proto'] !== 'https')
-	    res.redirect('https://racing1.herokuapp.com/login');
+	    res.redirect(301, 'https://racing1.herokuapp.com/login');
 	  else
 	    next();
 });
@@ -219,7 +219,7 @@ function startApp() {
         var redirectServer = express();
         redirectServer.get('*', function(req, res) {
             var urlPort = port === 80 ? '' : ':' + port;
-            res.redirect('https://' + req.hostname + urlPort + req.path);
+            res.redirect(301, 'https://' + req.hostname + urlPort + req.path);
         });
         http.createServer(redirectServer)
             .listen(settings.http.port || 5000, host);
