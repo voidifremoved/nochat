@@ -6,3 +6,6 @@
 
 rooms:
   private: true
+  
+files:
+  enable: true
