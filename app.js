@@ -114,11 +114,7 @@ app.use(require('connect-assets')({
     servePath: 'media/dist'
 }));
 
-app.use(function(req, res, next) {
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Headers", "X-Requested-With");
-  next();
-});
+
 
 // Public
 app.use('/media', express.static(__dirname + '/media', {
