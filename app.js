@@ -114,7 +114,11 @@ app.use(require('connect-assets')({
     servePath: 'media/dist'
 }));
 
-
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Headers", "X-Requested-With");
+  next();
+});
 
 // Public
 app.use('/media', express.static(__dirname + '/media', {
@@ -173,8 +177,8 @@ app.use(function(req, res, next) {
 
 // SSL redirect
 app.use('/*', function(req,res,next){
-	  if(req.headers['x-forwarded-proto'] !== 'http')
-	    res.redirect('http://racing2.herokuapp.com/login');
+	  if(req.headers['x-forwarded-proto'] !== 'https')
+	    res.redirect('https://racing2.herokuapp.com/login');
 	  else
 	    next();
 });
