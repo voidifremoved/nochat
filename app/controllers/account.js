@@ -56,7 +56,7 @@ module.exports = function() {
 
     app.get('/logout', function(req, res ) {
         req.session.destroy();
-        res.redirect(301, '/login');
+        res.redirect('/login');
     });
 
     app.post('/account/login', function(req) {

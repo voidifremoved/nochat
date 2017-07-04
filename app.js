@@ -168,12 +168,12 @@ app.use(function(req, res, next) {
 });
 
 // SSL redirect
-app.use('/*', function(req,res,next){
-	  if(req.headers['x-forwarded-proto'] !== 'https')
-	    res.redirect(301, 'https://racing2.herokuapp.com/login');
-	  else
-	    next();
-});
+//app.use('/*', function(req,res,next){
+//	  if(req.headers['x-forwarded-proto'] !== 'http')
+//	    res.redirect('http://racing2.herokuapp.com/login');
+//	  else
+//	    next();
+//});
 
 //
 // Controllers
@@ -219,7 +219,7 @@ function startApp() {
         var redirectServer = express();
         redirectServer.get('*', function(req, res) {
             var urlPort = port === 80 ? '' : ':' + port;
-            res.redirect(301, 'https://' + req.hostname + urlPort + req.path);
+            res.redirect('https://' + req.hostname + urlPort + req.path);
         });
         http.createServer(redirectServer)
             .listen(settings.http.port || 5000, host);

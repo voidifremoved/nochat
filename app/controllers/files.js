@@ -81,7 +81,7 @@ module.exports = function() {
                         }
                     });
                 } else {
-                    res.redirect(301, url);
+                    res.redirect(url);
                 }
 
             });
