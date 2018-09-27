@@ -9,3 +9,10 @@ rooms:
   
 files:
   enable: true
+  provider: s3
+  
+  s3:
+    accessKeyId: AKIAJG6BNV4IKHRORIZQ
+    secretAccessKey: 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
+    bucket: heroku-uploads-1231
+    region: us-west-2

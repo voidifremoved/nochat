@@ -92,7 +92,8 @@
     "passport.socketio": "3.6.2",
     "require-directory": "~2.1.1",
     "require-tree": "^1.1.1",
-    "uuid": "^3.0.0"
+    "uuid": "^3.0.0",
+    "lets-chat-s3": "^0.3.1"
   },
   "devDependencies": {
     "eslint": "^3.1.1",
