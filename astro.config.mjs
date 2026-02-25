@@ -9,6 +9,7 @@ import tailwindcss from '@tailwindcss/vite';
 // https://astro.build/config
 export default defineConfig({
   site: 'https://voidifremoved.github.io',
+  base: process.env.NODE_ENV === 'production' ? '/nochat/' : '/',
   integrations: [mdx(), sitemap()],
 
   vite: {
