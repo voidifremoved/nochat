@@ -1,0 +1,32 @@
+---
+title: "Visualizing Data with D3 Chord Diagram"
+date: 2026-02-26
+summary: "A demonstration of a D3 chord diagram in a blog post."
+tags: ["d3", "visualization", "javascript"]
+---
+
+import ChordDiagram from '../../components/ChordDiagram.astro';
+
+export const matrix = [
+  [11975,  5871, 8916, 2868],
+  [ 1951, 10048, 2060, 6171],
+  [ 8010, 16145, 8090, 8045],
+  [ 1013,   990,  940, 6907]
+];
+
+export const names = ["Group A", "Group B", "Group C", "Group D"];
+export const colors = ["#444444", "#FFDD89", "#957244", "#F26223"];
+
+This post demonstrates how to integrate a D3 chord diagram into an Astro blog post.
+
+## The Chord Diagram
+
+Below is a chord diagram visualizing the relationships between four groups.
+
+<div style="display: flex; justify-content: center;">
+  <ChordDiagram matrix={matrix} names={names} colors={colors} />
+</div>
+
+## How it works
+
+The diagram is rendered using D3.js inside an Astro component. The data represents a matrix of flows between the groups. The chord diagram shows the inter-relationships between data points.
