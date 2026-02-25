@@ -1,0 +1,103 @@
+---
+interface Props {
+  matrix: number[][];
+  names: string[];
+  colors: string[];
+}
+
+const { matrix, names, colors } = Astro.props;
+
+// Generate a likely unique ID for this instance (though not strictly needed if we iterate by class)
+const uniqueId = "chord-" + Math.random().toString(36).substr(2, 9);
+const chartData = JSON.stringify({ matrix, names, colors });
+---
+
+<div id={uniqueId} class="chord-diagram-container" data-chart-data={chartData}></div>
+
+<script>
+  import * as d3 from 'd3';
+
+  const initChordDiagrams = () => {
+    const containers = document.querySelectorAll('.chord-diagram-container');
+    containers.forEach(container => {
+        if (container.hasAttribute('data-initialized')) return;
+        container.setAttribute('data-initialized', 'true');
+
+        try {
+            const data = JSON.parse(container.getAttribute('data-chart-data') || '{}');
+            const { matrix, names, colors } = data;
+
+            if (!matrix || !names || !colors) return;
+
+            const width = 640;
+            const height = 640;
+            const outerRadius = Math.min(width, height) * 0.5 - 30;
+            const innerRadius = outerRadius - 20;
+
+            const chord = d3.chord()
+                .padAngle(0.05)
+                .sortSubgroups(d3.descending);
+
+            const arc = d3.arc()
+                .innerRadius(innerRadius)
+                .outerRadius(outerRadius);
+
+            const ribbon = d3.ribbon()
+                .radius(innerRadius);
+
+            // Clear any existing content
+            const d3Container = d3.select(container);
+            d3Container.selectAll("*").remove();
+
+            const svg = d3Container
+                .append("svg")
+                .attr("viewBox", [-width / 2, -height / 2, width, height])
+                .attr("width", width)
+                .attr("height", height)
+                .style("font", "12px sans-serif")
+                .style("max-width", "100%")
+                .style("height", "auto");
+
+            const chords = chord(matrix);
+
+            const group = svg.append("g")
+                .selectAll("g")
+                .data(chords.groups)
+                .join("g");
+
+            group.append("path")
+                .attr("fill", d => colors[d.index])
+                .attr("stroke", d => d3.rgb(colors[d.index]).darker())
+                .attr("d", arc);
+
+            group.append("text")
+                .each(d => { d.angle = (d.startAngle + d.endAngle) / 2; })
+                .attr("dy", ".35em")
+                .attr("transform", d => `
+                    rotate(${(d.angle * 180 / Math.PI - 90)})
+                    translate(${outerRadius + 10})
+                    ${d.angle > Math.PI ? "rotate(180)" : ""}
+                `)
+                .attr("text-anchor", d => d.angle > Math.PI ? "end" : "start")
+                .text(d => names[d.index]);
+
+            svg.append("g")
+                .attr("fill-opacity", 0.67)
+                .selectAll("path")
+                .data(chords)
+                .join("path")
+                .attr("d", ribbon)
+                .attr("fill", d => colors[d.target.index])
+                .attr("stroke", d => d3.rgb(colors[d.target.index]).darker());
+        } catch (e) {
+            console.error("Error rendering chord diagram:", e);
+        }
+    });
+  };
+
+  // Run on load
+  initChordDiagrams();
+
+  // Handle Astro view transitions if enabled (optional, but good practice)
+  document.addEventListener('astro:page-load', initChordDiagrams);
+</script>
