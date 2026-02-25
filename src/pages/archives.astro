@@ -48,7 +48,7 @@ const years = [...new Set(posts.map((post) => post.data.pubDate.getFullYear()))]
                                     posts.filter((post) => post.data.pubDate.getFullYear() === year).map((post) => (
                                         <li>
                                             <FormattedDate date={post.data.pubDate} />
-                                            <a href={`/posts/${post.id}/`}>{post.data.title}</a>
+                                            <a href={`${import.meta.env.BASE_URL}posts/${post.id}/`}>{post.data.title}</a>
                                         </li>
                                     ))
                                 }

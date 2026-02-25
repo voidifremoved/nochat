@@ -43,7 +43,7 @@ const tags = [...new Set(posts.map((post) => post.data.tags || []).flat())].sort
 				{
 					tags.map((tag) => (
 						<li>
-							<a href={`/tags/${tag}/`}>{tag}</a>
+							<a href={`${import.meta.env.BASE_URL}tags/${tag}/`}>{tag}</a>
 						</li>
 					))
 				}

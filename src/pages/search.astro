@@ -23,7 +23,7 @@ const searchList = posts.map(post => ({
 		<Header />
 		<main>
             <h1>Search</h1>
-            <div id="search-container" data-search-list={JSON.stringify(searchList)}>
+            <div id="search-container" data-search-list={JSON.stringify(searchList)} data-base-url={import.meta.env.BASE_URL}>
                 <input type="text" id="search" placeholder="Search..." class="search-input" />
                 <ul id="results"></ul>
             </div>
@@ -36,6 +36,7 @@ const searchList = posts.map(post => ({
             const container = document.getElementById('search-container');
             if (container) {
                 const searchList = JSON.parse(container.dataset.searchList);
+                const baseUrl = container.dataset.baseUrl;
                 const options = {
                     keys: ['title', 'description'],
                     includeScore: true,
@@ -57,7 +58,7 @@ const searchList = posts.map(post => ({
 
                     resultsUl.innerHTML = results.map(result => `
                         <li class="result-item">
-                            <a href="/posts/${result.item.slug}/">
+                            <a href="${baseUrl}posts/${result.item.slug}/">
                                 <h3>${result.item.title}</h3>
                             </a>
                             <p>${result.item.description || ''}</p>
