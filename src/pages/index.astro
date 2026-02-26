@@ -15,41 +15,43 @@ const posts = (await getCollection('blog')).sort(
 <html lang="en">
 	<head>
 		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<style>
-			main {
-				width: 960px;
-			}
-			ul {
-				list-style-type: none;
-				padding: unset;
-			}
-			ul li {
-				display: flex;
-				gap: 1rem;
-				align-items: center;
-				margin-bottom: 0.5rem;
-			}
-			ul li :global(time) {
-				font-style: italic;
-				color: #595959;
-			}
-		</style>
 	</head>
-	<body>
+	<body class="bg-zinc-50 text-zinc-900 font-sans antialiased">
 		<Header />
-		<main>
-			<h1>Welcome</h1>
-			<p>
-				A space for thoughts, ideas, and things worth sharing.
-			</p>
+		<main class="w-full max-w-4xl mx-auto px-4 py-12 md:py-20">
+			<section class="mb-16 text-center">
+				<h1 class="text-5xl md:text-7xl font-bold tracking-tight text-zinc-900 mb-6 font-display">
+					{SITE_TITLE}
+				</h1>
+				<p class="text-xl text-zinc-600 max-w-2xl mx-auto leading-relaxed">
+					{SITE_DESCRIPTION}
+				</p>
+			</section>
+
 			<section>
-				<h2>Recent Posts</h2>
-				<ul>
+				<div class="flex items-center justify-between mb-8 border-b border-zinc-200 pb-4">
+					<h2 class="text-2xl font-bold text-zinc-900 font-display">Recent Posts</h2>
+					<a href={`${import.meta.env.BASE_URL}posts`} class="text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors">View all &rarr;</a>
+				</div>
+				<ul class="space-y-4">
 					{
 						posts.map((post) => (
-							<li>
-								<FormattedDate date={post.data.pubDate} />
-								<a href={`${import.meta.env.BASE_URL}posts/${post.id}/`}>{post.data.title}</a>
+							<li class="group">
+								<a href={`${import.meta.env.BASE_URL}posts/${post.id}/`} class="block group-hover:bg-white p-6 rounded-2xl transition-all duration-200 border border-transparent group-hover:border-zinc-200 group-hover:shadow-sm">
+									<div class="flex flex-col gap-2">
+										<div class="flex items-center justify-between">
+											<h3 class="text-xl font-bold text-zinc-900 group-hover:text-blue-600 transition-colors font-display">
+												{post.data.title}
+											</h3>
+											<div class="text-sm text-zinc-400 font-medium whitespace-nowrap ml-4">
+												<FormattedDate date={post.data.pubDate} />
+											</div>
+										</div>
+										<p class="text-zinc-600 line-clamp-2 leading-relaxed">
+											{post.data.description || post.data.summary}
+										</p>
+									</div>
+								</a>
 							</li>
 						))
 					}
