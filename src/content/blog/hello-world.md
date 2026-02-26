@@ -10,7 +10,7 @@ showtoc: false
 
 This is the beginning of something new.
 
-After clearing out the old experiments that once lived here, this site has been rebuilt from the ground up as a clean, minimal blog. It is powered by [Hugo](https://gohugo.io/) and the [PaperMod](https://github.com/adityatelange/hugo-PaperMod) theme, deployed automatically to GitHub Pages whenever a change is pushed.
+After clearing out the old experiments that once lived here, this site has been rebuilt from the ground up as a clean, minimal blog. It is powered by [Astro](https://astro.build/) and deployed automatically to GitHub Pages whenever a change is pushed.
 
 ## What to expect
 

@@ -1,0 +1,21 @@
+
+> astro-temp@0.0.1 dev
+> astro dev --port 4321
+
+00:35:04 [types] Generated 1ms
+
+ update  ▶ New version of Astro available: 5.18.0
+  Run npx @astrojs/upgrade to update
+
+00:35:05 [content] Syncing content
+00:35:05 [content] Synced content
+00:35:05 [vite] Re-optimizing dependencies because vite config has changed
+
+ astro  v5.17.3 ready in 1408 ms
+
+┃ Local    http://localhost:4321/
+┃ Network  use --host to expose
+
+00:35:05 watching for file changes...
+00:36:10 [200] / 270ms
+00:36:12 [200] /posts/hello-world/ 14ms
