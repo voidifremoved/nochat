@@ -14,35 +14,30 @@ const posts = (await getCollection('blog')).sort(
 <!doctype html>
 <html lang="en">
 	<head>
-		<BaseHead title={SITE_TITLE} description={SITE_DESCRIPTION} />
-		<style>
-			ul {
-				list-style-type: none;
-				padding: unset;
-			}
-			ul li {
-				display: flex;
-				gap: 1rem;
-				align-items: center;
-				margin-bottom: 0.5rem;
-			}
-			ul li :global(time) {
-				font-style: italic;
-				color: #595959;
-			}
-		</style>
+		<BaseHead title={`Blog | ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
 	</head>
-	<body>
+	<body class="bg-zinc-50 text-zinc-900 font-sans antialiased min-h-screen flex flex-col">
 		<Header />
-		<main>
+		<main class="w-full max-w-4xl mx-auto px-4 py-12 md:py-20 flex-grow">
 			<section>
-                <h1>Blog</h1>
-				<ul>
+                <h1 class="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 mb-12 font-display">Blog</h1>
+				<ul class="space-y-8">
 					{
 						posts.map((post) => (
-							<li>
-								<FormattedDate date={post.data.pubDate} />
-								<a href={`${import.meta.env.BASE_URL}posts/${post.id}/`}>{post.data.title}</a>
+							<li class="group border-b border-zinc-200 pb-8 last:border-0">
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex flex-col sm:flex-row sm:items-baseline sm:justify-between gap-1">
+                                        <a href={`${import.meta.env.BASE_URL}posts/${post.id}/`} class="text-2xl font-bold text-zinc-900 group-hover:text-blue-600 transition-colors font-display block">
+                                            {post.data.title}
+                                        </a>
+                                        <div class="text-sm text-zinc-500 font-medium whitespace-nowrap">
+                                            <FormattedDate date={post.data.pubDate} />
+                                        </div>
+                                    </div>
+                                    <p class="text-zinc-600 leading-relaxed max-w-2xl">
+                                        {post.data.description || post.data.summary}
+                                    </p>
+                                </div>
 							</li>
 						))
 					}

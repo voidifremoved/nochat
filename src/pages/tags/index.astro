@@ -13,37 +13,18 @@ const tags = [...new Set(posts.map((post) => post.data.tags || []).flat())].sort
 <html lang="en">
 	<head>
 		<BaseHead title={`Tags | ${SITE_TITLE}`} description={SITE_DESCRIPTION} />
-		<style>
-			ul {
-				list-style-type: none;
-				padding: unset;
-			}
-			li {
-				display: inline-block;
-				margin-right: 0.5rem;
-				margin-bottom: 0.5rem;
-			}
-			li a {
-				background: #eee;
-				padding: 0.2rem 0.5rem;
-				border-radius: 4px;
-				text-decoration: none;
-				color: #333;
-			}
-			li a:hover {
-				background: #ddd;
-			}
-		</style>
 	</head>
-	<body>
+	<body class="bg-zinc-50 text-zinc-900 font-sans antialiased min-h-screen flex flex-col">
 		<Header />
-		<main>
-			<h1>Tags</h1>
-			<ul>
+		<main class="w-full max-w-4xl mx-auto px-4 py-12 md:py-20 flex-grow">
+			<h1 class="text-4xl md:text-5xl font-bold tracking-tight text-zinc-900 mb-12 font-display">Tags</h1>
+			<ul class="flex flex-wrap gap-4">
 				{
 					tags.map((tag) => (
 						<li>
-							<a href={`${import.meta.env.BASE_URL}tags/${tag}/`}>{tag}</a>
+							<a href={`${import.meta.env.BASE_URL}tags/${tag}/`} class="inline-block px-4 py-2 bg-white border border-zinc-200 rounded-full text-zinc-700 hover:text-zinc-900 hover:border-zinc-400 hover:shadow-sm transition-all text-lg font-medium">
+								#{tag}
+							</a>
 						</li>
 					))
 				}
