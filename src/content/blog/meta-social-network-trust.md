@@ -1,0 +1,219 @@
+---
+title: "Building a Meta Social Network for Trust Verification"
+date: 2026-03-01
+draft: false
+tags: ["system-design", "java", "social-media", "trust"]
+categories: ["engineering"]
+summary: "Exploring the design and implementation of a meta social network that layers real-world vouching over existing platforms to combat bots and establish human authenticity."
+showtoc: true
+---
+
+As bot activity and deepfakes increasingly pollute traditional social media, establishing authenticity online has never been more challenging. Instead of relying on centralized blue checkmarks or arbitrary algorithmic detection, what if we could build a decentralized web of trust?
+
+In this post, we'll explore the design of a **Meta Social Network**—a side layer that sits atop existing platforms like Twitter, Bluesky, and Instagram. Its sole purpose is to establish trust through reputation vouching: proving that an account belongs to a real person because another verified human has vouched for them in real life.
+
+## The Concept: A Trust Overlay
+
+The core idea is simple: **You only vouch for someone if you know them in real life.**
+
+This creates a directed graph of trust. If Alice knows Bob, and Bob knows Charlie, Alice might not know Charlie, but she can trust that Charlie is a real human being because of her trust in Bob. This system acts as a "side layer." It doesn't host content; it only hosts identity links and vouch records.
+
+Users would install a browser extension or use a specialized client that queries this Trust Network API whenever they view a profile on Twitter, Bluesky, or Instagram. The extension overlays a "Trust Score" or "Humanity Proof" badge indicating the degrees of separation between you and the profile you are viewing.
+
+## System Architecture and Data Models
+
+To make this work, the system needs to link a central Trust Identity to various platform-specific identities.
+
+### Data Models
+
+Here is a look at the core domain entities:
+
+- **User**: The central identity within the Trust Network.
+- **SocialProfile**: A linked identity on a specific platform (e.g., a Twitter handle, a Bluesky DID).
+- **Vouch**: A directed edge representing that one User has vouched for another.
+
+```mermaid
+classDiagram
+    class User {
+        +UUID id
+        +String primaryEmail
+        +LocalDateTime createdAt
+    }
+    class SocialProfile {
+        +UUID id
+        +UUID userId
+        +String platformName
+        +String platformId
+        +String handle
+    }
+    class Vouch {
+        +UUID id
+        +UUID voucherId
+        +UUID voucheeId
+        +LocalDateTime timestamp
+        +String context
+    }
+
+    User "1" -- "*" SocialProfile : owns
+    User "1" -- "*" Vouch : gives
+    User "1" -- "*" Vouch : receives
+```
+
+## Java Implementation
+
+Let's look at how we might implement this using Java, Spring Boot, and Spring Data JPA.
+
+### Entity Definitions
+
+First, we define our JPA entities to map to the database.
+
+```java
+import jakarta.persistence.*;
+import java.time.LocalDateTime;
+import java.util.UUID;
+import java.util.List;
+
+@Entity
+@Table(name = "users")
+public class User {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    private String primaryEmail;
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private List<SocialProfile> socialProfiles;
+
+    // Getters and Setters omitted for brevity
+}
+
+@Entity
+@Table(name = "social_profiles")
+public class SocialProfile {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
+
+    private String platformName; // e.g., "TWITTER", "BLUESKY", "INSTAGRAM"
+    private String platformId;   // Platform-specific unique ID
+    private String handle;
+
+    // Getters and Setters omitted
+}
+
+@Entity
+@Table(name = "vouches")
+public class Vouch {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private UUID id;
+
+    @ManyToOne
+    @JoinColumn(name = "voucher_id", nullable = false)
+    private User voucher;
+
+    @ManyToOne
+    @JoinColumn(name = "vouchee_id", nullable = false)
+    private User vouchee;
+
+    private LocalDateTime timestamp = LocalDateTime.now();
+    private String context; // Optional real-world context (e.g., "Met at conference")
+
+    // Getters and Setters omitted
+}
+```
+
+### Vouching Service
+
+When a user wants to vouch for someone, the system must ensure they are verifying a specific profile and linking it to their web of trust.
+
+```java
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+@Service
+public class TrustService {
+
+    private final UserRepository userRepository;
+    private final VouchRepository vouchRepository;
+
+    public TrustService(UserRepository userRepository, VouchRepository vouchRepository) {
+        this.userRepository = userRepository;
+        this.vouchRepository = vouchRepository;
+    }
+
+    @Transactional
+    public Vouch createVouch(UUID voucherId, UUID voucheeId, String context) {
+        User voucher = userRepository.findById(voucherId)
+            .orElseThrow(() -> new IllegalArgumentException("Voucher not found"));
+        User vouchee = userRepository.findById(voucheeId)
+            .orElseThrow(() -> new IllegalArgumentException("Vouchee not found"));
+
+        // Check if vouch already exists to prevent duplicates
+        if (vouchRepository.existsByVoucherAndVouchee(voucher, vouchee)) {
+            throw new IllegalStateException("Vouch already exists");
+        }
+
+        Vouch vouch = new Vouch();
+        vouch.setVoucher(voucher);
+        vouch.setVouchee(vouchee);
+        vouch.setContext(context);
+
+        return vouchRepository.save(vouch);
+    }
+}
+```
+
+## API Call Flow
+
+How does the client (e.g., the browser extension) interact with this backend? Let's trace two primary flows: **Vouching for an account** and **Checking a profile's trust score**.
+
+### Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    participant Ext as Browser Extension
+    participant API as Trust Network API
+    participant DB as Graph Database
+
+    %% Checking Trust Score Flow
+    Note over Ext, DB: Flow 1: Viewing a Twitter Profile
+    Ext->>API: GET /api/trust/score?platform=twitter&handle=johndoe&viewerId=123
+    API->>DB: Query shortest path (Viewer -> JohnDoe)
+    DB-->>API: Returns degree of separation (e.g., 2)
+    API-->>Ext: { "score": 2, "isHuman": true }
+
+    %% Vouching Flow
+    Note over Ext, DB: Flow 2: Vouching for an Account
+    Ext->>API: POST /api/vouches (voucheeHandle, context)
+    API->>DB: Validate handles and existence
+    DB-->>API: Validation OK
+    API->>DB: Insert Vouch Edge (Voucher -> Vouchee)
+    DB-->>API: Edge created
+    API-->>Ext: 201 Created (Vouch successful)
+```
+
+### Pathfinding and Degrees of Separation
+
+While the JPA models above use a standard relational structure, calculating the degrees of separation in real-time across millions of users requires graph processing. In production, the `vouches` table would likely be mirrored into a graph database like Neo4j, or we could use recursive CTEs (Common Table Expressions) in PostgreSQL.
+
+For example, a graph query to find the connection might look like this in Cypher (Neo4j):
+
+```cypher
+MATCH path = shortestPath(
+  (viewer:User {id: $viewerId})-[:VOUCHED_FOR*..4]->(target:User {id: $targetId})
+)
+RETURN length(path) as degreesOfSeparation
+```
+
+## Conclusion
+
+By overlaying a cryptographic or verifiable "web of trust" on top of existing social media ecosystems, we don't have to wait for platforms to solve the bot problem themselves. A meta social network, built on real-world reputation and vouching, empowers users to verify authenticity collaboratively.
+
+The implementation requires careful thought regarding graph traversal performance and privacy, but the foundation—simple nodes and edges of human trust—remains robust against automation.
