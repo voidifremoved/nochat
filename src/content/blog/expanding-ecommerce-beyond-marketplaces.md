@@ -1,6 +1,6 @@
 ---
 title: "Expanding Beyond Marketplaces: The Path to E-commerce Independence"
-date: 2024-05-20
+date: 2026-04-05
 draft: false
 tags: ["ecommerce", "business", "growth"]
 categories: ["business"]
