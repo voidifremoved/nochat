@@ -1,12 +1,14 @@
 ---
 title: "Building a Meta Social Network for Trust Verification"
-date: 2026-03-01
+date: 2026-04-05
 draft: false
 tags: ["system-design", "java", "social-media", "trust"]
 categories: ["engineering"]
 summary: "Exploring the design and implementation of a meta social network that layers real-world vouching over existing platforms to combat bots and establish human authenticity."
 showtoc: true
 ---
+import D3ClassDiagram from '../../components/D3ClassDiagram.astro';
+import D3SequenceDiagram from '../../components/D3SequenceDiagram.astro';
 
 As bot activity and deepfakes increasingly pollute traditional social media, establishing authenticity online has never been more challenging. Instead of relying on centralized blue checkmarks or arbitrary algorithmic detection, what if we could build a decentralized web of trust?
 
@@ -20,6 +22,8 @@ This creates a directed graph of trust. If Alice knows Bob, and Bob knows Charli
 
 Users would install a browser extension or use a specialized client that queries this Trust Network API whenever they view a profile on Twitter, Bluesky, or Instagram. The extension overlays a "Trust Score" or "Humanity Proof" badge indicating the degrees of separation between you and the profile you are viewing.
 
+For example, imagine trying to verify a local journalist reporting on an unfolding situation. Instead of just seeing an account with thousands of followers (which could be artificially inflated), you could see that the journalist was vouched for by a trusted colleague of yours, or perhaps by someone who runs a local community center that you personally know. This forms an unbroken chain of human trust extending from you to the author, effectively cutting through the noise.
+
 ## System Architecture and Data Models
 
 To make this work, the system needs to link a central Trust Identity to various platform-specific identities.
@@ -32,32 +36,7 @@ Here is a look at the core domain entities:
 - **SocialProfile**: A linked identity on a specific platform (e.g., a Twitter handle, a Bluesky DID).
 - **Vouch**: A directed edge representing that one User has vouched for another.
 
-```mermaid
-classDiagram
-    class User {
-        +UUID id
-        +String primaryEmail
-        +LocalDateTime createdAt
-    }
-    class SocialProfile {
-        +UUID id
-        +UUID userId
-        +String platformName
-        +String platformId
-        +String handle
-    }
-    class Vouch {
-        +UUID id
-        +UUID voucherId
-        +UUID voucheeId
-        +LocalDateTime timestamp
-        +String context
-    }
-
-    User "1" -- "*" SocialProfile : owns
-    User "1" -- "*" Vouch : gives
-    User "1" -- "*" Vouch : receives
-```
+<D3ClassDiagram />
 
 ## Java Implementation
 
@@ -176,32 +155,13 @@ How does the client (e.g., the browser extension) interact with this backend? Le
 
 ### Sequence Diagram
 
-```mermaid
-sequenceDiagram
-    participant Ext as Browser Extension
-    participant API as Trust Network API
-    participant DB as Graph Database
-
-    %% Checking Trust Score Flow
-    Note over Ext, DB: Flow 1: Viewing a Twitter Profile
-    Ext->>API: GET /api/trust/score?platform=twitter&handle=johndoe&viewerId=123
-    API->>DB: Query shortest path (Viewer -> JohnDoe)
-    DB-->>API: Returns degree of separation (e.g., 2)
-    API-->>Ext: { "score": 2, "isHuman": true }
-
-    %% Vouching Flow
-    Note over Ext, DB: Flow 2: Vouching for an Account
-    Ext->>API: POST /api/vouches (voucheeHandle, context)
-    API->>DB: Validate handles and existence
-    DB-->>API: Validation OK
-    API->>DB: Insert Vouch Edge (Voucher -> Vouchee)
-    DB-->>API: Edge created
-    API-->>Ext: 201 Created (Vouch successful)
-```
+<D3SequenceDiagram />
 
 ### Pathfinding and Degrees of Separation
 
 While the JPA models above use a standard relational structure, calculating the degrees of separation in real-time across millions of users requires graph processing. In production, the `vouches` table would likely be mirrored into a graph database like Neo4j, or we could use recursive CTEs (Common Table Expressions) in PostgreSQL.
+
+As the network grows, performance can become a significant bottleneck. Relational databases require computationally expensive JOINs for deep traversal, whereas native graph databases like Neo4j use **index-free adjacency**, meaning traversal speed depends on the result size rather than the total data size. To handle peak loads and deliver sub-second latency for these degree-of-separation queries, the architecture would need horizontally scaling read replicas for the graph database. Furthermore, we can employ aggressive caching strategies, pre-computing short paths for active users and utilizing in-memory datastores like Redis or Memcached for frequently viewed high-profile accounts.
 
 For example, a graph query to find the connection might look like this in Cypher (Neo4j):
 

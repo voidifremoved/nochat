@@ -1,0 +1,158 @@
+---
+---
+
+<div class="d3-sequence-diagram-container w-full overflow-x-auto my-8"></div>
+
+<script>
+  import * as d3 from 'd3';
+
+  const initSequenceDiagrams = () => {
+    const containers = document.querySelectorAll('.d3-sequence-diagram-container');
+    containers.forEach(container => {
+        if (container.hasAttribute('data-initialized')) return;
+        container.setAttribute('data-initialized', 'true');
+
+        const width = 800;
+  const height = 650;
+
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .style("max-width", "800px")
+            .style("font-family", "sans-serif");
+
+        // Definitions for arrows
+        svg.append("defs").append("marker")
+            .attr("id", "arrow-seq")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 10)
+            .attr("refY", 0)
+            .attr("markerWidth", 8)
+            .attr("markerHeight", 8)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("fill", "#333")
+            .attr("d", "M0,-5L10,0L0,5");
+
+        svg.select("defs").append("marker")
+            .attr("id", "arrow-seq-dashed")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 10)
+            .attr("refY", 0)
+            .attr("markerWidth", 8)
+            .attr("markerHeight", 8)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("fill", "#333")
+            .attr("d", "M0,-5L10,0L0,5");
+
+        const participants = [
+            { id: "Ext", label: "Browser Extension", x: 150 },
+            { id: "API", label: "Trust Network API", x: 400 },
+            { id: "DB", label: "Graph Database", x: 650 }
+        ];
+
+        // Draw participants
+        participants.forEach(p => {
+            // Box
+            svg.append("rect")
+                .attr("x", p.x - 70)
+                .attr("y", 20)
+                .attr("width", 140)
+                .attr("height", 40)
+                .attr("fill", "#e2e8f0")
+                .attr("stroke", "#475569")
+                .attr("stroke-width", 2)
+                .attr("rx", 4);
+
+            svg.append("text")
+                .attr("x", p.x)
+                .attr("y", 45)
+                .attr("text-anchor", "middle")
+                .attr("font-weight", "bold")
+                .attr("fill", "#1e293b")
+                .text(p.label);
+
+            // Lifeline
+            svg.append("line")
+                .attr("x1", p.x)
+                .attr("y1", 60)
+                .attr("x2", p.x)
+                .attr("y2", height - 20) // Now 630 instead of 530
+                .attr("stroke", "#94a3b8")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", "5,5");
+        });
+
+        // Helper to draw messages
+        const drawMessage = (y, fromId, toId, text, isReturn = false) => {
+            const from = participants.find(p => p.id === fromId).x;
+            const to = participants.find(p => p.id === toId).x;
+
+            // Adjust to/from slightly so arrows don't overlap lifeline perfectly
+            const fromX = from < to ? from + 5 : from - 5;
+            const toX = from < to ? to - 5 : to + 5;
+
+            svg.append("line")
+                .attr("x1", fromX)
+                .attr("y1", y)
+                .attr("x2", toX)
+                .attr("y2", y)
+                .attr("stroke", "#333")
+                .attr("stroke-width", 2)
+                .attr("stroke-dasharray", isReturn ? "5,5" : "0")
+                .attr("marker-end", isReturn ? "url(#arrow-seq-dashed)" : "url(#arrow-seq)");
+
+            svg.append("text")
+                .attr("x", (from + to) / 2)
+                .attr("y", y - 8)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "12px")
+                .attr("fill", "#334155")
+                .text(text);
+        };
+
+        // Draw note
+        const drawNote = (y, text) => {
+            svg.append("rect")
+                .attr("x", 50)
+                .attr("y", y - 15)
+                .attr("width", 700)
+                .attr("height", 30)
+                .attr("fill", "#fef3c7")
+                .attr("stroke", "#d97706")
+                .attr("stroke-width", 1);
+
+            svg.append("text")
+                .attr("x", 400)
+                .attr("y", y + 4)
+                .attr("text-anchor", "middle")
+                .attr("font-size", "12px")
+                .attr("font-weight", "bold")
+                .attr("fill", "#92400e")
+                .text(text);
+        }
+
+        // Flow 1
+        drawNote(90, "Flow 1: Viewing a Twitter Profile");
+        drawMessage(130, "Ext", "API", "GET /api/trust/score?platform=twitter&handle=johndoe");
+        drawMessage(170, "API", "DB", "Query shortest path (Viewer -> JohnDoe)");
+        drawMessage(210, "DB", "API", "Returns degree of separation (e.g., 2)", true);
+        drawMessage(250, "API", "Ext", "{ score: 2, isHuman: true }", true);
+
+        // Flow 2
+        drawNote(310, "Flow 2: Vouching for an Account");
+        drawMessage(350, "Ext", "API", "POST /api/vouches (voucheeHandle, context)");
+        drawMessage(390, "API", "DB", "Validate handles and existence");
+        drawMessage(430, "DB", "API", "Validation OK", true);
+        drawMessage(470, "API", "DB", "Insert Vouch Edge (Voucher -> Vouchee)");
+        drawMessage(510, "DB", "API", "Edge created", true);
+        drawMessage(550, "API", "Ext", "201 Created (Vouch successful)", true);
+    });
+  };
+
+  initSequenceDiagrams();
+  document.addEventListener('astro:page-load', initSequenceDiagrams);
+</script>

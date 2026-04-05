@@ -1,0 +1,124 @@
+---
+---
+
+<div class="d3-class-diagram-container w-full overflow-x-auto my-8"></div>
+
+<script>
+  import * as d3 from 'd3';
+
+  const initClassDiagrams = () => {
+    const containers = document.querySelectorAll('.d3-class-diagram-container');
+    containers.forEach(container => {
+        if (container.hasAttribute('data-initialized')) return;
+        container.setAttribute('data-initialized', 'true');
+
+        const width = 800;
+        const height = 400;
+
+        const svg = d3.select(container)
+            .append("svg")
+            .attr("viewBox", `0 0 ${width} ${height}`)
+            .attr("width", "100%")
+            .attr("height", "100%")
+            .style("max-width", "800px")
+            .style("font-family", "monospace, sans-serif");
+
+        // Definitions for arrows
+        svg.append("defs").append("marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 -5 10 10")
+            .attr("refX", 10)
+            .attr("refY", 0)
+            .attr("markerWidth", 8)
+            .attr("markerHeight", 8)
+            .attr("orient", "auto")
+            .append("path")
+            .attr("fill", "#666")
+            .attr("d", "M0,-5L10,0L0,5");
+
+        const classes = [
+            { id: "User", x: 300, y: 50, width: 200, height: 100,
+              attrs: ["+UUID id", "+String primaryEmail", "+LocalDateTime createdAt"] },
+            { id: "SocialProfile", x: 50, y: 250, width: 200, height: 120,
+              attrs: ["+UUID id", "+UUID userId", "+String platformName", "+String platformId", "+String handle"] },
+            { id: "Vouch", x: 550, y: 250, width: 200, height: 120,
+              attrs: ["+UUID id", "+UUID voucherId", "+UUID voucheeId", "+LocalDateTime timestamp", "+String context"] }
+        ];
+
+        const relationships = [
+            { source: "User", target: "SocialProfile", label: "1 -- * owns", path: "M 350,150 L 150,250" },
+            { source: "User", target: "Vouch", label: "1 -- * gives/receives", path: "M 450,150 L 650,250" }
+        ];
+
+        // Draw relationships
+        relationships.forEach(rel => {
+            svg.append("path")
+                .attr("d", rel.path)
+                .attr("stroke", "#666")
+                .attr("stroke-width", 2)
+                .attr("fill", "none")
+                .attr("marker-end", "url(#arrow)");
+
+            // Middle point roughly
+            const pathNode = svg.selectAll("path").filter((d, i, nodes) => nodes[i].getAttribute("d") === rel.path).node();
+            const midPoint = pathNode.getPointAtLength(pathNode.getTotalLength() / 2);
+
+            svg.append("text")
+                .attr("x", midPoint.x)
+                .attr("y", midPoint.y - 10)
+                .attr("text-anchor", "middle")
+                .attr("fill", "#444")
+                .style("font-size", "12px")
+                .text(rel.label);
+        });
+
+        // Draw classes
+        const classGroup = svg.selectAll(".class-group")
+            .data(classes)
+            .enter()
+            .append("g")
+            .attr("transform", d => `translate(${d.x},${d.y})`);
+
+        classGroup.append("rect")
+            .attr("width", d => d.width)
+            .attr("height", d => d.height)
+            .attr("fill", "#f8f9fa")
+            .attr("stroke", "#333")
+            .attr("stroke-width", 2)
+            .attr("rx", 5);
+
+        classGroup.append("rect")
+            .attr("width", d => d.width)
+            .attr("height", 30)
+            .attr("fill", "#e9ecef")
+            .attr("stroke", "#333")
+            .attr("stroke-width", 2)
+            .attr("rx", 5);
+
+        // Fix top corners of body rect and bottom corners of header rect
+        classGroup.append("line").attr("x1", 0).attr("y1", 30).attr("x2", d => d.width).attr("y2", 30).attr("stroke", "#333").attr("stroke-width", 2);
+
+
+        classGroup.append("text")
+            .attr("x", d => d.width / 2)
+            .attr("y", 20)
+            .attr("text-anchor", "middle")
+            .attr("font-weight", "bold")
+            .text(d => d.id);
+
+        classGroup.each(function(d) {
+            const group = d3.select(this);
+            d.attrs.forEach((attr, i) => {
+                group.append("text")
+                    .attr("x", 10)
+                    .attr("y", 50 + i * 16)
+                    .attr("font-size", "12px")
+                    .text(attr);
+            });
+        });
+    });
+  };
+
+  initClassDiagrams();
+  document.addEventListener('astro:page-load', initClassDiagrams);
+</script>
