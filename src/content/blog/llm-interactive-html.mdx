@@ -1,0 +1,100 @@
+---
+title: "The Power of Interactive HTML Outputs from LLMs"
+date: 2026-05-09
+summary: "Exploring how generating single-file HTML instead of markdown can drastically improve understanding of complex technical concepts like clustering and architecture."
+tags: ["llm", "html", "visualization", "architecture", "pekko"]
+---
+
+Large Language Models typically default to outputting walls of Markdown. While great for text and basic code snippets, Markdown falls flat when describing complex spatial systems, comparing multiple approaches, or showing interactive flows.
+
+Inspired by [Thariq's post on the effectiveness of HTML](https://thariqs.github.io/html-effectiveness/), I experimented with prompting LLMs to produce self-contained, interactive HTML files instead of static text.
+
+Below are two examples of how this approach transforms technical explanations.
+
+## Example 1: Comparing Clustering Approaches (Apache Pekko)
+
+When evaluating architectural decisions, we often need to compare options side-by-side, look at pros/cons, examine diagrams, and read configuration code. A markdown file forces this into a linear read.
+
+By asking the LLM for a self-contained HTML file, we get a much richer artifact.
+
+### The Prompt
+
+```text
+I am evaluating how to handle peer discovery for an Apache Pekko cluster.
+I need to compare using the Kubernetes API approach versus using Hazelcast.
+
+Please write a self-contained HTML file (with inline CSS and JS) that provides a
+side-by-side comparison. The HTML should include:
+1. A brief summary of each approach.
+2. Pros and cons formatted cleanly with tags.
+3. Simple, inline SVG diagrams showing how nodes discover each other in both scenarios.
+4. An interactive tabbed interface for each approach showing the required code
+   snippets (e.g., application.conf and RBAC yaml for K8s, application.conf
+   and hazelcast.xml for Hazelcast).
+
+Do not output any markdown, only the raw HTML.
+```
+
+### The Result
+
+Instead of scrolling through pages of text, the output is a compact dashboard. You can click the tabs to swap between configuration files while keeping the context in view.
+
+<div className="not-prose my-8 border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+  <div className="bg-gray-100 px-4 py-2 text-sm font-mono border-b border-gray-300 flex justify-between items-center">
+    <span>pekko-clustering.html</span>
+    <a href={`${import.meta.env.BASE_URL}html/pekko-clustering.html`} target="_blank" className="text-blue-600 hover:underline">Open full screen ↗</a>
+  </div>
+  <iframe
+    src={`${import.meta.env.BASE_URL}html/pekko-clustering.html`}
+    className="w-full h-[600px] border-none"
+    title="Pekko Clustering Comparison"
+  ></iframe>
+</div>
+
+---
+
+## Example 2: Visualizing Microservice Architecture
+
+Diagrams in markdown usually require rendering an image or using Mermaid (which can be visually limiting). For architecture, sometimes you need to see different states or variants of a system.
+
+### The Prompt
+
+```text
+I need to understand different strategies for routing and load balancing in a
+clustered microservices architecture.
+
+Please create a single, self-contained HTML file (using inline CSS, JS, and SVG)
+that provides an interactive visualization.
+
+Requirements:
+1. Provide three architectural variants: 'API Gateway', 'Service Mesh', and
+   'Client-side Load Balancing'.
+2. Provide a row of buttons at the top to toggle between these three variants.
+3. Use inline SVG to draw the nodes (Client, Load Balancer, Gateway, Services,
+   Proxies, etc.) and edges connecting them.
+4. Animate the edges (e.g., dashed lines moving) to show the flow of traffic.
+5. Make the SVG nodes clickable. When a node is clicked, display details about
+   that component in a panel below the diagram.
+
+Make it visually appealing and clean. Return only the raw HTML.
+```
+
+### The Result
+
+This output is incredibly effective. Not only do you get vector graphics that scale perfectly, but you can actually interact with the architecture. Toggling between API Gateway and Service Mesh instantly redraws the diagram, making the differences immediately obvious.
+
+<div className="not-prose my-8 border border-gray-300 rounded-lg overflow-hidden shadow-sm">
+  <div className="bg-gray-100 px-4 py-2 text-sm font-mono border-b border-gray-300 flex justify-between items-center">
+    <span>microservice-viz.html</span>
+    <a href={`${import.meta.env.BASE_URL}html/microservice-viz.html`} target="_blank" className="text-blue-600 hover:underline">Open full screen ↗</a>
+  </div>
+  <iframe
+    src={`${import.meta.env.BASE_URL}html/microservice-viz.html`}
+    className="w-full h-[700px] border-none"
+    title="Microservices Architecture Visualization"
+  ></iframe>
+</div>
+
+## Conclusion
+
+By treating HTML as the output medium, we can turn LLMs into rapid prototyping engines for explanations, design docs, and interactive learning tools. The next time you ask an agent to explain a complex system, try asking for a `.html` file instead of an explanation.
