@@ -95,6 +95,44 @@ This output is incredibly effective. Not only do you get vector graphics that sc
   ></iframe>
 </div>
 
+## Automating this with an Agent Skill
+
+Writing out those lengthy prompts every time you want a visualization can be tedious. To solve this, you can give your AI agent a "Skill" file—a set of standing instructions that teaches it exactly how to format these interactive HTML documents without needing to be told every time.
+
+I have created a comprehensive skill file that you can download and provide to any agent. It instructs the agent to automatically build the high-fidelity dashboards seen above (complete with TL;DR boxes, decision matrices, interactive SVG animations, and deep-dive inspectors) whenever you ask for an architectural explanation or system comparison.
+
+You can view and download the skill file here:
+<a href={`${import.meta.env.BASE_URL}skills/interactive-html-skill.md`} target="_blank" className="text-blue-600 hover:underline">`interactive-html-skill.md`</a>
+
+<div className="not-prose my-8 border border-gray-300 rounded-lg overflow-hidden shadow-sm bg-gray-50 p-4 max-h-96 overflow-y-auto">
+  <pre className="text-xs text-gray-800 whitespace-pre-wrap font-mono">
+    {`# Skill: Generate High-Fidelity Interactive HTML Visualizations
+
+## Objective
+When requested to explain complex architectural concepts, system topologies, or perform comparative technical analysis, do not output basic Markdown text or standard code blocks. Instead, generate a **single, self-contained, high-fidelity interactive HTML document** that provides a rich visual dashboard for the topic.
+
+## Core Directives
+
+1.  **Self-Contained File:**
+    *   Output **only** raw HTML code starting with \`<!DOCTYPE html>\`. Do not output explanatory markdown before or after the code block.
+    *   The HTML must include all CSS (via \`<style>\`), JavaScript (via \`<script>\`), and SVG graphics inline.
+
+2.  **Layout and Aesthetics:**
+    *   Use a modern, clean, dashboard-like aesthetic with ample whitespace, subtle borders, and soft shadows.
+
+3.  **Required Functional Elements:**
+    Every generated HTML visualization must incorporate the following elements:
+    *   **Header / ADR Banner**
+    *   **TL;DR Summary Box**
+    *   **Interactive Toggles / Tabs**
+    *   **Dynamic Visualizations (SVG)**
+    *   **Comprehensive Decision Matrices**
+    *   **Deep-Dive Inspectors**
+
+(View the full file for the complete checklist and examples.)`}
+  </pre>
+</div>
+
 ## Conclusion
 
-By treating HTML as the output medium, we can turn LLMs into rapid prototyping engines for explanations, design docs, and interactive learning tools. The next time you ask an agent to explain a complex system, try asking for a `.html` file instead of an explanation.
+By treating HTML as the output medium, we can turn LLMs into rapid prototyping engines for explanations, design docs, and interactive learning tools. By equipping your agent with the provided skill file, generating these rich assets becomes entirely automatic.
