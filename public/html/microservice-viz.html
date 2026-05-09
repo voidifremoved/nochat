@@ -3,176 +3,280 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Microservice Architecture Visualization</title>
+    <title>Microservice Routing Patterns Visualization</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 900px; margin: 0 auto; padding: 2rem; color: #333; }
-        h1, h2 { color: #111; }
-        .controls { display: flex; gap: 1rem; margin-bottom: 2rem; background: #f4f4f4; padding: 1rem; border-radius: 8px; }
-        .btn { padding: 0.5rem 1rem; border: 1px solid #ccc; background: white; border-radius: 4px; cursor: pointer; }
-        .btn.active { background: #326ce5; color: white; border-color: #326ce5; }
-
-        .viz-container { border: 1px solid #ddd; border-radius: 8px; padding: 2rem; background: white; min-height: 400px; display: flex; justify-content: center; align-items: center; }
-
-        /* Node styles */
-        .node { stroke: #333; stroke-width: 2px; cursor: pointer; transition: all 0.2s; }
-        .node:hover { stroke: #000; stroke-width: 3px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1)); }
-
-        /* Edge styles */
-        .edge { stroke: #999; stroke-width: 2px; fill: none; transition: all 0.5s; }
-        .edge.animated { stroke-dasharray: 5, 5; animation: dash 20s linear infinite; }
-
-        @keyframes dash {
-            to { stroke-dashoffset: -1000; }
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --primary: #4f46e5;
+            --primary-hover: #4338ca;
+            --radius: 8px;
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
         }
 
-        /* Detail panel */
-        #detail-panel { margin-top: 1rem; padding: 1rem; border: 1px solid #ddd; border-radius: 8px; background: #f9f9f9; display: none; }
-        #detail-title { margin-top: 0; }
+        body { font-family: var(--font-sans); line-height: 1.6; color: var(--text-main); background: var(--bg); padding: 2rem; margin: 0; }
+
+        .container { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 1.5rem; }
+
+        header { margin-bottom: 1rem; }
+        h1 { margin: 0 0 0.5rem 0; font-size: 2rem; letter-spacing: -0.025em; }
+        p.subtitle { color: var(--text-muted); margin: 0; }
+
+        /* Controls */
+        .controls { display: flex; gap: 0.5rem; background: var(--surface); padding: 0.5rem; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .btn { padding: 0.75rem 1.5rem; border: none; background: transparent; color: var(--text-muted); border-radius: 4px; cursor: pointer; font-weight: 500; font-size: 0.95rem; transition: all 0.2s; }
+        .btn:hover { background: #f1f5f9; color: var(--text-main); }
+        .btn.active { background: var(--primary); color: white; box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3); }
+
+        /* Main Grid */
+        .layout-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+        @media (max-width: 900px) { .layout-grid { grid-template-columns: 1fr; } }
+
+        /* Viz Container */
+        .viz-container { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); min-height: 500px; display: flex; justify-content: center; align-items: center; }
+
+        /* Side Panels */
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); margin-bottom: 1.5rem; }
+        .panel h3 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border); padding-bottom: 0.75rem; margin-bottom: 1rem; }
+
+        /* Trade-offs Grid */
+        .tradeoffs { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        .tradeoff-box h4 { margin: 0 0 0.5rem 0; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+        .tradeoff-box ul { margin: 0; padding-left: 1.2rem; font-size: 0.9rem; color: var(--text-main); }
+        .tradeoff-box ul li { margin-bottom: 0.25rem; }
+        .pro ul li::marker { color: #10b981; }
+        .con ul li::marker { color: #ef4444; }
+
+        /* Node Detail Content */
+        .detail-item { margin-bottom: 1rem; }
+        .detail-label { font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 600; letter-spacing: 0.05em; margin-bottom: 0.2rem; }
+        .detail-value { font-size: 0.95rem; }
+        .detail-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.3rem; }
+        .detail-tag { background: #f1f5f9; color: #475569; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8rem; font-family: monospace; }
+
+        /* SVG Styles */
+        .node { stroke: #334155; stroke-width: 2px; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+        .node:hover { stroke: #000; stroke-width: 3px; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15)); transform: translateY(-2px); }
+        .node.selected { stroke: var(--primary); stroke-width: 3px; filter: drop-shadow(0 0 8px rgba(79, 70, 229, 0.4)); }
+
+        .edge { stroke: #94a3b8; stroke-width: 2px; fill: none; transition: all 0.5s; }
+        .edge.animated { stroke-dasharray: 6, 6; animation: dash 15s linear infinite; }
+        .edge.control { stroke: #cbd5e1; stroke-dasharray: 4, 4; }
+
+        @keyframes dash { to { stroke-dashoffset: -500; } }
+
+        text { font-family: var(--font-sans); user-select: none; pointer-events: none; }
     </style>
 </head>
 <body>
-    <h1>Clustered Microservices Architecture</h1>
-    <p>Interactive visualization showing different routing and load balancing strategies for clustered microservices.</p>
+    <div class="container">
+        <header>
+            <h1>Routing Patterns in Microservices</h1>
+            <p class="subtitle">Interactive topology explorer for API Gateway, Service Mesh, and Client-side Load Balancing.</p>
+        </header>
 
-    <div class="controls">
-        <button class="btn active" onclick="setArchitecture('api-gateway')">API Gateway</button>
-        <button class="btn" onclick="setArchitecture('service-mesh')">Service Mesh</button>
-        <button class="btn" onclick="setArchitecture('client-side')">Client-side LB</button>
-    </div>
+        <div class="controls">
+            <button class="btn active" onclick="setArchitecture('api-gateway')">API Gateway</button>
+            <button class="btn" onclick="setArchitecture('service-mesh')">Service Mesh</button>
+            <button class="btn" onclick="setArchitecture('client-side')">Client-side LB</button>
+        </div>
 
-    <div class="viz-container">
-        <svg id="arch-viz" viewBox="0 0 800 400" xmlns="http://www.w3.org/2000/svg" width="100%">
-            <!-- Definitions for markers and animations -->
-            <defs>
-                <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#999" />
-                </marker>
-                <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#326ce5" />
-                </marker>
-            </defs>
+        <div class="layout-grid">
+            <!-- Left Column: Visualization -->
+            <div class="viz-container">
+                <svg id="arch-viz" viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg" width="100%">
+                    <defs>
+                        <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8" />
+                        </marker>
+                        <marker id="arrow-active" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                            <path d="M 0 0 L 10 5 L 0 10 z" fill="#4f46e5" />
+                        </marker>
+                    </defs>
+                    <g id="viz-content"></g>
+                </svg>
+            </div>
 
-            <!-- This content will be dynamically generated by JS -->
-            <g id="viz-content"></g>
-        </svg>
-    </div>
+            <!-- Right Column: Details & Tradeoffs -->
+            <div class="sidebar">
+                <div class="panel" id="arch-info-panel">
+                    <h3 id="arch-title">API Gateway</h3>
+                    <p id="arch-desc" style="font-size: 0.95rem; margin-bottom: 1.5rem;"></p>
 
-    <div id="detail-panel">
-        <h3 id="detail-title">Component Details</h3>
-        <p id="detail-desc">Select a component in the diagram above to see details.</p>
+                    <div class="tradeoffs">
+                        <div class="tradeoff-box pro">
+                            <h4>Pros</h4>
+                            <ul id="arch-pros"></ul>
+                        </div>
+                        <div class="tradeoff-box con">
+                            <h4>Cons</h4>
+                            <ul id="arch-cons"></ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="panel" id="node-detail-panel" style="display: none;">
+                    <h3 id="detail-title">Component Inspector</h3>
+
+                    <div class="detail-item">
+                        <div class="detail-label">Responsibility</div>
+                        <div class="detail-value" id="detail-desc"></div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-label">Common Tools</div>
+                        <div class="detail-tags" id="detail-tools"></div>
+                    </div>
+
+                    <div class="detail-item">
+                        <div class="detail-label">Failure Modes</div>
+                        <div class="detail-value text-muted" id="detail-failure" style="font-size: 0.85rem;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
         const architectures = {
             'api-gateway': {
+                title: "API Gateway Pattern",
+                desc: "A single entry point for all external clients. The gateway handles routing, composition, protocol translation, and edge functions like authentication and rate limiting.",
+                pros: ["Centralized auth/security", "Hides internal network structure", "Reduces client complexity"],
+                cons: ["Possible single point of failure", "Can become a development bottleneck", "Adds network hop latency"],
                 nodes: [
-                    { id: 'client', x: 50, y: 200, width: 80, height: 40, rx: 4, fill: '#eee', label: 'Client', desc: 'External client making a request.' },
-                    { id: 'lb', x: 200, y: 200, width: 100, height: 60, rx: 30, fill: '#f6d365', label: 'Load Balancer', desc: 'Distributes incoming external traffic.' },
-                    { id: 'gateway', x: 380, y: 200, width: 100, height: 60, rx: 4, fill: '#ff9a9e', label: 'API Gateway', desc: 'Handles routing, auth, and rate limiting.' },
+                    { id: 'client-web', x: 50, y: 150, width: 80, height: 40, rx: 4, fill: '#f1f5f9', label: 'Web App', desc: 'Frontend single page application running in user browser.', tools: ['React', 'Vue', 'Angular'], failure: 'Cannot reach gateway due to network issues.' },
+                    { id: 'client-mob', x: 50, y: 250, width: 80, height: 40, rx: 4, fill: '#f1f5f9', label: 'Mobile App', desc: 'Native mobile application.', tools: ['iOS', 'Android', 'Flutter'], failure: 'High latency on poor mobile connections.' },
 
-                    { id: 'svc-a1', x: 600, y: 100, width: 90, height: 40, rx: 4, fill: '#a1c4fd', label: 'Service A (v1)', desc: 'Instance 1 of Service A.' },
-                    { id: 'svc-a2', x: 600, y: 160, width: 90, height: 40, rx: 4, fill: '#a1c4fd', label: 'Service A (v2)', desc: 'Instance 2 of Service A.' },
-                    { id: 'svc-b1', x: 600, y: 240, width: 90, height: 40, rx: 4, fill: '#84fab0', label: 'Service B', desc: 'Instance 1 of Service B.' },
-                    { id: 'svc-b2', x: 600, y: 300, width: 90, height: 40, rx: 4, fill: '#84fab0', label: 'Service B', desc: 'Instance 2 of Service B.' }
+                    { id: 'waf', x: 180, y: 200, width: 60, height: 80, rx: 4, fill: '#fcd34d', label: 'WAF', desc: 'Web Application Firewall filtering malicious traffic.', tools: ['Cloudflare', 'AWS WAF'], failure: 'False positives blocking legitimate traffic.' },
+
+                    { id: 'gateway', x: 300, y: 150, width: 100, height: 160, rx: 8, fill: '#fca5a5', label: 'API Gateway', desc: 'Routes requests to backend services, handles auth token validation, rate limiting, and request shaping.', tools: ['Kong', 'AWS API Gateway', 'KrakenD'], failure: 'Overloaded, causing cascading latency across all endpoints.' },
+
+                    { id: 'auth-svc', x: 500, y: 80, width: 100, height: 40, rx: 4, fill: '#e2e8f0', label: 'Auth Service', desc: 'Validates credentials and issues tokens.', tools: ['Keycloak', 'Auth0'], failure: 'DB connection maxed out.' },
+
+                    { id: 'svc-user', x: 600, y: 160, width: 100, height: 40, rx: 4, fill: '#93c5fd', label: 'User Service', desc: 'Manages user profiles and settings.', tools: ['Node.js', 'Go'], failure: 'Cache miss storm.' },
+                    { id: 'svc-order', x: 600, y: 240, width: 100, height: 40, rx: 4, fill: '#86efac', label: 'Order Service', desc: 'Handles order processing and history.', tools: ['Java', 'Python'], failure: 'Downstream payment provider timeout.' },
+                    { id: 'svc-inv', x: 600, y: 320, width: 100, height: 40, rx: 4, fill: '#c4b5fd', label: 'Inventory', desc: 'Tracks stock levels.', tools: ['Rust', 'Go'], failure: 'Database lock contention.' }
                 ],
                 edges: [
-                    { from: 'client', to: 'lb' },
-                    { from: 'lb', to: 'gateway' },
-                    { from: 'gateway', to: 'svc-a1', animated: true },
-                    { from: 'gateway', to: 'svc-a2', animated: true },
-                    { from: 'gateway', to: 'svc-b1', animated: true },
-                    { from: 'gateway', to: 'svc-b2', animated: true }
-                ],
-                desc: "An API Gateway handles all incoming requests and routes them to the appropriate backend microservices, often acting as a reverse proxy."
+                    { from: 'client-web', to: 'waf' },
+                    { from: 'client-mob', to: 'waf' },
+                    { from: 'waf', to: 'gateway' },
+                    { from: 'gateway', to: 'auth-svc', dashed: true, desc: 'Token check' },
+                    { from: 'gateway', to: 'svc-user', animated: true, color: '#3b82f6' },
+                    { from: 'gateway', to: 'svc-order', animated: true, color: '#10b981' },
+                    { from: 'gateway', to: 'svc-inv', animated: true, color: '#8b5cf6' },
+                    { from: 'svc-order', to: 'svc-inv', animated: true, desc: 'Check stock' }
+                ]
             },
             'service-mesh': {
+                title: "Service Mesh Pattern",
+                desc: "Delegates all service-to-service network communication to dedicated infrastructure (sidecar proxies), removing routing and resilience logic from the application code.",
+                pros: ["Language agnostic", "Advanced traffic shaping (canary, retry)", "Deep observability built-in"],
+                cons: ["Significant operational complexity", "Resource overhead (proxy per pod)", "Steep learning curve"],
                 nodes: [
-                    { id: 'client', x: 50, y: 200, width: 80, height: 40, rx: 4, fill: '#eee', label: 'Client', desc: 'External client making a request.' },
-                    { id: 'ingress', x: 200, y: 200, width: 100, height: 60, rx: 4, fill: '#f6d365', label: 'Ingress Proxy', desc: 'Entry point to the service mesh.' },
+                    { id: 'ingress', x: 50, y: 200, width: 80, height: 60, rx: 4, fill: '#fcd34d', label: 'Ingress', desc: 'Entry point handling external traffic into the cluster.', tools: ['Istio Ingress Gateway', 'Nginx'], failure: 'Certificate expiry.' },
 
-                    { id: 'svc-a-pod', x: 400, y: 120, width: 180, height: 80, rx: 4, fill: '#f9f9f9', label: '', desc: 'Pod containing Service A and its sidecar.', isGroup: true },
-                    { id: 'proxy-a', x: 420, y: 140, width: 60, height: 40, rx: 4, fill: '#cfd9df', label: 'Proxy', desc: 'Envoy/Linkerd sidecar proxy.' },
-                    { id: 'svc-a', x: 500, y: 140, width: 60, height: 40, rx: 4, fill: '#a1c4fd', label: 'Service A', desc: 'Application logic.' },
+                    { id: 'cp', x: 350, y: 40, width: 150, height: 50, rx: 4, fill: '#f1f5f9', label: 'Control Plane', desc: 'Configures proxies, manages certificates, gathers telemetry.', tools: ['Istiod', 'Linkerd Destination'], failure: 'Proxies lose connection to CP (data plane continues to function).' },
 
-                    { id: 'svc-b-pod', x: 400, y: 240, width: 180, height: 80, rx: 4, fill: '#f9f9f9', label: '', desc: 'Pod containing Service B and its sidecar.', isGroup: true },
-                    { id: 'proxy-b', x: 420, y: 260, width: 60, height: 40, rx: 4, fill: '#cfd9df', label: 'Proxy', desc: 'Envoy/Linkerd sidecar proxy.' },
-                    { id: 'svc-b', x: 500, y: 260, width: 60, height: 40, rx: 4, fill: '#84fab0', label: 'Service B', desc: 'Application logic.' },
+                    { id: 'pod-a', x: 250, y: 150, width: 160, height: 70, rx: 4, fill: '#ffffff', label: '', isGroup: true },
+                    { id: 'proxy-a', x: 260, y: 165, width: 50, height: 40, rx: 4, fill: '#cbd5e1', label: 'Proxy', desc: 'Intercepts all inbound/outbound traffic for Service A.', tools: ['Envoy', 'Linkerd-proxy'], failure: 'OOM killed due to memory limits.' },
+                    { id: 'app-a', x: 340, y: 165, width: 60, height: 40, rx: 4, fill: '#93c5fd', label: 'App A', desc: 'Business logic, unaware of the network topology.', tools: ['Spring Boot', 'Express'], failure: 'Application logic bug.' },
 
-                    { id: 'control-plane', x: 400, y: 30, width: 180, height: 40, rx: 4, fill: '#e0c3fc', label: 'Control Plane', desc: 'Manages proxy configuration and policies.' }
+                    { id: 'pod-b', x: 550, y: 100, width: 160, height: 70, rx: 4, fill: '#ffffff', label: '', isGroup: true },
+                    { id: 'proxy-b', x: 560, y: 115, width: 50, height: 40, rx: 4, fill: '#cbd5e1', label: 'Proxy', desc: 'Intercepts traffic for Service B.', tools: ['Envoy'], failure: 'Misconfigured circuit breaker.' },
+                    { id: 'app-b', x: 640, y: 115, width: 60, height: 40, rx: 4, fill: '#86efac', label: 'App B', desc: 'Business logic.', tools: ['Go'], failure: 'DB connection failure.' },
+
+                    { id: 'pod-c', x: 550, y: 250, width: 160, height: 70, rx: 4, fill: '#ffffff', label: '', isGroup: true },
+                    { id: 'proxy-c', x: 560, y: 265, width: 50, height: 40, rx: 4, fill: '#cbd5e1', label: 'Proxy', desc: 'Intercepts traffic for Service C.', tools: ['Envoy'], failure: 'High CPU parsing rules.' },
+                    { id: 'app-c', x: 640, y: 265, width: 60, height: 40, rx: 4, fill: '#c4b5fd', label: 'App C', desc: 'Business logic.', tools: ['Python'], failure: 'Memory leak.' }
                 ],
                 edges: [
-                    { from: 'client', to: 'ingress' },
                     { from: 'ingress', to: 'proxy-a', animated: true },
-                    { from: 'ingress', to: 'proxy-b', animated: true },
-                    { from: 'proxy-a', to: 'svc-a' },
-                    { from: 'proxy-b', to: 'svc-b' },
-                    { from: 'proxy-a', to: 'proxy-b', animated: true, color: '#326ce5' },
-                    { from: 'control-plane', to: 'proxy-a', dashed: true },
-                    { from: 'control-plane', to: 'proxy-b', dashed: true },
-                    { from: 'control-plane', to: 'ingress', dashed: true }
-                ],
-                desc: "A Service Mesh uses sidecar proxies deployed alongside applications to handle all service-to-service communication, managed by a control plane."
+                    { from: 'proxy-a', to: 'app-a' },
+                    { from: 'proxy-a', to: 'proxy-b', animated: true, color: '#3b82f6' },
+                    { from: 'proxy-b', to: 'app-b' },
+                    { from: 'proxy-a', to: 'proxy-c', animated: true, color: '#3b82f6' },
+                    { from: 'proxy-c', to: 'app-c' },
+                    { from: 'cp', to: 'ingress', control: true },
+                    { from: 'cp', to: 'proxy-a', control: true },
+                    { from: 'cp', to: 'proxy-b', control: true },
+                    { from: 'cp', to: 'proxy-c', control: true }
+                ]
             },
             'client-side': {
+                title: "Client-side Load Balancing",
+                desc: "The client application queries a service registry to obtain a list of available service instances, then uses internal logic to select an instance and route the request.",
+                pros: ["No single point of failure (no central LB)", "Less network hops", "Client can make smart routing choices"],
+                cons: ["Routing logic must be written in every language used", "Trusts clients to behave correctly", "Registry becomes a critical dependency"],
                 nodes: [
-                    { id: 'client', x: 100, y: 200, width: 120, height: 80, rx: 4, fill: '#eee', label: '', desc: 'Client application containing the LB logic.', isGroup: true },
-                    { id: 'client-app', x: 110, y: 210, width: 100, height: 30, rx: 4, fill: '#fff', label: 'Client App', desc: 'The main client application.' },
-                    { id: 'client-lb', x: 110, y: 250, width: 100, height: 20, rx: 4, fill: '#f6d365', label: 'Internal LB', desc: 'Library handling load balancing (e.g., Ribbon).' },
+                    { id: 'registry', x: 350, y: 50, width: 140, height: 50, rx: 4, fill: '#e2e8f0', label: 'Service Registry', desc: 'Maintains a live directory of available service instances and their health status.', tools: ['Eureka', 'Consul', 'Zookeeper'], failure: 'Split brain network partition.' },
 
-                    { id: 'registry', x: 350, y: 100, width: 120, height: 50, rx: 4, fill: '#e0c3fc', label: 'Service Registry', desc: 'Maintains list of available service instances (e.g., Eureka, Consul).' },
+                    { id: 'client-app', x: 100, y: 180, width: 160, height: 100, rx: 4, fill: '#ffffff', label: '', isGroup: true },
+                    { id: 'c-logic', x: 110, y: 195, width: 140, height: 30, rx: 4, fill: '#f1f5f9', label: 'Client App Logic', desc: 'The application making requests to downstream services.', tools: ['Spring Boot', 'Node.js'], failure: 'Unhandled exceptions.' },
+                    { id: 'c-lb', x: 110, y: 240, width: 140, height: 30, rx: 4, fill: '#fcd34d', label: 'Embedded LB Library', desc: 'Library handling instance selection, retries, and circuit breaking.', tools: ['Netflix Ribbon', 'gRPC Client LB'], failure: 'Stale cache of endpoints.' },
 
-                    { id: 'svc-1', x: 600, y: 150, width: 90, height: 40, rx: 4, fill: '#a1c4fd', label: 'Instance 1', desc: 'Service instance 1.' },
-                    { id: 'svc-2', x: 600, y: 220, width: 90, height: 40, rx: 4, fill: '#a1c4fd', label: 'Instance 2', desc: 'Service instance 2.' },
-                    { id: 'svc-3', x: 600, y: 290, width: 90, height: 40, rx: 4, fill: '#a1c4fd', label: 'Instance 3', desc: 'Service instance 3.' }
+                    { id: 'svc-1', x: 550, y: 140, width: 100, height: 40, rx: 4, fill: '#93c5fd', label: 'Service A (Inst 1)', desc: 'Instance 1 in Availability Zone A.', tools: ['Docker Container'], failure: 'Node terminated unexpectedly.' },
+                    { id: 'svc-2', x: 550, y: 210, width: 100, height: 40, rx: 4, fill: '#93c5fd', label: 'Service A (Inst 2)', desc: 'Instance 2 in Availability Zone B.', tools: ['Docker Container'], failure: 'Network partition.' },
+                    { id: 'svc-3', x: 550, y: 280, width: 100, height: 40, rx: 4, fill: '#93c5fd', label: 'Service A (Inst 3)', desc: 'Instance 3 in Availability Zone C.', tools: ['Docker Container'], failure: 'Disk full.' }
                 ],
                 edges: [
-                    { from: 'client-lb', to: 'registry', dashed: true, desc: 'Fetch endpoints' },
-                    { from: 'svc-1', to: 'registry', dashed: true, desc: 'Register' },
-                    { from: 'svc-2', to: 'registry', dashed: true, desc: 'Register' },
-                    { from: 'svc-3', to: 'registry', dashed: true, desc: 'Register' },
-                    { from: 'client-lb', to: 'svc-1', animated: true },
-                    { from: 'client-lb', to: 'svc-2', animated: true },
-                    { from: 'client-lb', to: 'svc-3', animated: true }
-                ],
-                desc: "Client-side load balancing puts the routing logic inside the client application itself, which queries a service registry to find available endpoints."
+                    { from: 'c-lb', to: 'registry', dashed: true, desc: 'Fetch IPs' },
+                    { from: 'svc-1', to: 'registry', dashed: true, desc: 'Heartbeat' },
+                    { from: 'svc-2', to: 'registry', dashed: true, desc: 'Heartbeat' },
+                    { from: 'svc-3', to: 'registry', dashed: true, desc: 'Heartbeat' },
+                    { from: 'c-logic', to: 'c-lb' },
+                    { from: 'c-lb', to: 'svc-1', animated: true },
+                    { from: 'c-lb', to: 'svc-2', animated: true },
+                    { from: 'c-lb', to: 'svc-3', animated: true }
+                ]
             }
         };
+
+        let selectedNodeId = null;
 
         function renderArchitecture(archId) {
             const arch = architectures[archId];
             const svg = document.getElementById('viz-content');
-            svg.innerHTML = ''; // Clear existing
+            svg.innerHTML = '';
+            selectedNodeId = null;
+            document.getElementById('node-detail-panel').style.display = 'none';
 
-            // Draw edges first so they are behind nodes
+            // Update Text content
+            document.getElementById('arch-title').textContent = arch.title;
+            document.getElementById('arch-desc').textContent = arch.desc;
+
+            document.getElementById('arch-pros').innerHTML = arch.pros.map(p => `<li>${p}</li>`).join('');
+            document.getElementById('arch-cons').innerHTML = arch.cons.map(c => `<li>${c}</li>`).join('');
+
+            // Draw edges
             arch.edges.forEach(edge => {
                 const fromNode = arch.nodes.find(n => n.id === edge.from);
                 const toNode = arch.nodes.find(n => n.id === edge.to);
 
                 if (!fromNode || !toNode) return;
 
-                // Calculate connection points (simplified center to center)
                 const x1 = fromNode.x + fromNode.width / 2;
                 const y1 = fromNode.y + fromNode.height / 2;
                 const x2 = toNode.x + toNode.width / 2;
                 const y2 = toNode.y + toNode.height / 2;
 
-                // Adjust points to node boundaries (rough approximation)
                 const angle = Math.atan2(y2 - y1, x2 - x1);
                 const startX = x1 + Math.cos(angle) * (fromNode.width/2);
                 const startY = y1 + Math.sin(angle) * (fromNode.height/2);
-                const endX = x2 - Math.cos(angle) * (toNode.width/2 + 5); // +5 for marker
+                const endX = x2 - Math.cos(angle) * (toNode.width/2 + 5);
                 const endY = y2 - Math.sin(angle) * (toNode.height/2 + 5);
 
                 const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 
-                // Handle curves or straight lines
                 let d = '';
-                if (Math.abs(startX - endX) > 100 && Math.abs(startY - endY) > 50) {
-                    // Curved line
+                if (Math.abs(startX - endX) > 120 && Math.abs(startY - endY) > 60 && !edge.control) {
                     const cpX = startX + (endX - startX) / 2;
                     d = `M ${startX} ${startY} C ${cpX} ${startY}, ${cpX} ${endY}, ${endX} ${endY}`;
                 } else {
-                    // Straight line
                     d = `M ${startX} ${startY} L ${endX} ${endY}`;
                 }
 
@@ -180,13 +284,15 @@
 
                 let classes = 'edge';
                 if (edge.animated) classes += ' animated';
+                if (edge.control) classes += ' control';
                 path.setAttribute('class', classes);
 
                 if (edge.dashed) path.setAttribute('stroke-dasharray', '5,5');
+
                 if (edge.color) {
                     path.setAttribute('stroke', edge.color);
                     path.setAttribute('marker-end', 'url(#arrow-active)');
-                } else {
+                } else if (!edge.control) {
                     path.setAttribute('marker-end', 'url(#arrow)');
                 }
 
@@ -198,22 +304,25 @@
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
 
                 const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('id', `rect-${node.id}`);
                 rect.setAttribute('x', node.x);
                 rect.setAttribute('y', node.y);
                 rect.setAttribute('width', node.width);
                 rect.setAttribute('height', node.height);
                 rect.setAttribute('rx', node.rx);
                 rect.setAttribute('fill', node.fill);
-                rect.setAttribute('class', 'node');
 
+                let classes = 'node';
                 if (node.isGroup) {
                     rect.setAttribute('stroke-dasharray', '4,4');
-                    rect.setAttribute('stroke', '#ccc');
-                    rect.setAttribute('fill', 'transparent');
+                    rect.setAttribute('stroke', '#cbd5e1');
+                    classes = '';
                 }
+                rect.setAttribute('class', classes);
 
-                // Add click handler
-                rect.addEventListener('click', () => showDetails(node));
+                if (!node.isGroup) {
+                    rect.addEventListener('click', () => selectNode(node));
+                }
 
                 g.appendChild(rect);
 
@@ -223,43 +332,47 @@
                     text.setAttribute('y', node.y + node.height / 2);
                     text.setAttribute('text-anchor', 'middle');
                     text.setAttribute('dominant-baseline', 'middle');
-                    text.setAttribute('font-size', node.isGroup ? '10px' : '12px');
-                    text.setAttribute('pointer-events', 'none'); // Let clicks pass through to rect
-
-                    if (node.isGroup) {
-                        text.setAttribute('y', node.y + 12);
-                    }
-
+                    text.setAttribute('font-size', '12px');
+                    text.setAttribute('font-weight', '500');
+                    text.setAttribute('fill', '#0f172a');
                     text.textContent = node.label;
                     g.appendChild(text);
                 }
 
                 svg.appendChild(g);
             });
-
-            // Reset details panel
-            document.getElementById('detail-panel').style.display = 'block';
-            document.getElementById('detail-title').textContent = archId.replace('-', ' ').toUpperCase();
-            document.getElementById('detail-desc').textContent = arch.desc;
         }
 
-        function showDetails(node) {
-            const panel = document.getElementById('detail-panel');
-            document.getElementById('detail-title').textContent = node.label || node.id;
+        function selectNode(node) {
+            // Deselect previous
+            if (selectedNodeId) {
+                const prev = document.getElementById(`rect-${selectedNodeId}`);
+                if (prev) prev.classList.remove('selected');
+            }
+
+            // Select new
+            selectedNodeId = node.id;
+            const current = document.getElementById(`rect-${node.id}`);
+            if (current) current.classList.add('selected');
+
+            // Populate panel
+            document.getElementById('node-detail-panel').style.display = 'block';
+            document.getElementById('detail-title').textContent = node.label;
             document.getElementById('detail-desc').textContent = node.desc;
-            panel.style.display = 'block';
+
+            const toolsHtml = node.tools ? node.tools.map(t => `<span class="detail-tag">${t}</span>`).join('') : '<span class="text-muted">Generic Component</span>';
+            document.getElementById('detail-tools').innerHTML = toolsHtml;
+
+            document.getElementById('detail-failure').textContent = node.failure || 'Standard hardware/network failures.';
         }
 
         function setArchitecture(archId) {
-            // Update buttons
             document.querySelectorAll('.btn').forEach(btn => btn.classList.remove('active'));
             event.target.classList.add('active');
-
-            // Render
             renderArchitecture(archId);
         }
 
-        // Initialize
+        // Init
         renderArchitecture('api-gateway');
     </script>
 </body>
