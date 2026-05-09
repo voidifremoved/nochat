@@ -3,167 +3,524 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apache Pekko Clustering: Kubernetes vs Hazelcast</title>
+    <title>Architecture Decision: Pekko Cluster Discovery</title>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; max-width: 1000px; margin: 0 auto; padding: 2rem; color: #333; }
-        h1, h2, h3 { color: #111; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2rem; }
-        .card { border: 1px solid #ddd; border-radius: 8px; padding: 1.5rem; }
-        .card h3 { margin-top: 0; }
-        .tabs { display: flex; border-bottom: 1px solid #ddd; margin-bottom: 1rem; }
-        .tab { padding: 0.5rem 1rem; cursor: pointer; border: 1px solid transparent; border-bottom: none; }
-        .tab.active { border-color: #ddd; border-radius: 4px 4px 0 0; background: #f9f9f9; font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        pre { background: #f4f4f4; padding: 1rem; border-radius: 4px; overflow-x: auto; font-size: 0.9em; }
-        code { font-family: monospace; }
-        .tag { display: inline-block; padding: 0.2rem 0.5rem; border-radius: 4px; font-size: 0.8em; margin-right: 0.5rem; }
-        .tag.pro { background: #e6f4ea; color: #1e8e3e; }
-        .tag.con { background: #fce8e6; color: #d93025; }
+        :root {
+            --bg: #fafafa;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-bg: #eff6ff;
+            --success: #10b981;
+            --success-bg: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-bg: #fffbeb;
+            --danger: #ef4444;
+            --danger-bg: #fef2f2;
+            --radius: 8px;
+            --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+            --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+        }
 
-        /* Simple SVG styling */
-        svg { width: 100%; height: auto; max-width: 400px; margin: 1rem auto; display: block; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: var(--font-sans);
+            line-height: 1.6;
+            color: var(--text-main);
+            background: var(--bg);
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.025em; }
+        h2 { font-size: 1.5rem; margin: 2rem 0 1rem; letter-spacing: -0.025em; }
+        h3 { font-size: 1.25rem; margin-bottom: 0.75rem; }
+
+        p { margin-bottom: 1rem; color: var(--text-main); }
+        .text-muted { color: var(--text-muted); }
+
+        /* TL;DR Box */
+        .tldr {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-left: 4px solid var(--primary);
+            padding: 1.5rem;
+            border-radius: var(--radius);
+            margin-bottom: 2rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .tldr h3 { margin-top: 0; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+
+        /* Grid Layout */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tags */
+        .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 1.5rem; }
+        .tag {
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        .tag.pro { background: var(--success-bg); color: var(--success); border: 1px solid #a7f3d0; }
+        .tag.con { background: var(--danger-bg); color: var(--danger); border: 1px solid #fecaca; }
+        .tag.info { background: var(--primary-bg); color: var(--primary); border: 1px solid #bfdbfe; }
+
+        /* Collapsible Sections */
+        details {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            margin-bottom: 1rem;
+            overflow: hidden;
+        }
+        summary {
+            padding: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            background: #f8fafc;
+            user-select: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        summary:hover { background: #f1f5f9; }
+        details[open] summary { border-bottom: 1px solid var(--border); }
+        .details-content { padding: 1.5rem; }
+        .step { display: flex; margin-bottom: 1rem; }
+        .step-num {
+            background: var(--primary); color: white;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.8rem; font-weight: bold;
+            margin-right: 1rem; flex-shrink: 0;
+        }
+
+        /* Tabs */
+        .code-editor {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-top: auto;
+            background: #1e1e1e;
+        }
+        .tabs {
+            display: flex;
+            background: #2d2d2d;
+            border-bottom: 1px solid #404040;
+        }
+        .tab {
+            padding: 0.75rem 1.25rem;
+            color: #9cdcfe;
+            font-family: var(--font-mono);
+            font-size: 0.85rem;
+            cursor: pointer;
+            border-right: 1px solid #404040;
+            border-bottom: 2px solid transparent;
+        }
+        .tab:hover { background: #3d3d3d; }
+        .tab.active { background: #1e1e1e; border-bottom-color: #3b82f6; color: #fff; }
+        .tab-content { display: none; padding: 1.5rem; overflow-x: auto; }
+        .tab-content.active { display: block; }
+        pre { margin: 0; }
+        code { font-family: var(--font-mono); font-size: 0.9rem; color: #d4d4d4; }
+        .token.comment { color: #6a9955; }
+        .token.string { color: #ce9178; }
+        .token.keyword { color: #569cd6; }
+
+        /* Comparison Table */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        th, td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+        th { background: #f8fafc; font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: #f8fafc; }
+
+        /* Interactive SVG Diagram */
+        .diagram-container {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background: var(--surface);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+        svg { width: 100%; height: auto; max-height: 250px; }
+        .svg-node { cursor: pointer; transition: all 0.2s; }
+        .svg-node:hover rect { filter: brightness(0.9); }
+        .tooltip {
+            position: absolute;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 0.5rem 0.75rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        @media (max-width: 768px) {
+            .grid-2 { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
-    <h1>Apache Pekko Clustering</h1>
-    <p>Comparing peer discovery mechanisms for Pekko clusters: <strong>Kubernetes API</strong> vs <strong>Hazelcast</strong>.</p>
-
-    <div class="grid">
-        <!-- Kubernetes Approach -->
-        <div class="card">
-            <h3>Kubernetes API</h3>
-            <p>Uses Kubernetes API server to query for pods with specific labels.</p>
-
-            <div style="margin-bottom: 1rem;">
-                <span class="tag pro">+ Native to K8s</span>
-                <span class="tag pro">+ No extra infra</span>
-                <span class="tag con">- RBAC setup needed</span>
+    <div class="container">
+        <header>
+            <div class="tags" style="margin-bottom: 0.5rem;">
+                <span class="tag info">Architecture Decision Record</span>
+                <span class="tag info">Status: Proposed</span>
             </div>
+            <h1>Pekko Cluster Peer Discovery Mechanism</h1>
+            <p class="text-muted">Evaluating Kubernetes API vs Hazelcast for node discovery in distributed Pekko applications.</p>
+        </header>
 
-            <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
-                <rect x="150" y="20" width="100" height="40" rx="4" fill="#326ce5" />
-                <text x="200" y="45" fill="white" text-anchor="middle" font-size="14">K8s API Server</text>
+        <div class="tldr">
+            <h3>TL;DR</h3>
+            <p>We are migrating our monolithic service to a clustered Apache Pekko architecture to handle stateful websockets. The nodes need to discover each other to form a cluster. </p>
+            <p><strong>Recommendation:</strong> Proceed with the <strong>Kubernetes API</strong> approach. Since our infrastructure is strictly bound to Kubernetes and we do not span multiple datacenters, introducing Hazelcast adds unnecessary architectural complexity and memory overhead. K8s API provides a native, zero-infrastructure solution leveraging our existing control plane.</p>
+        </div>
 
-                <rect x="50" y="120" width="80" height="40" rx="4" fill="#e45e5e" />
-                <text x="90" y="145" fill="white" text-anchor="middle" font-size="14">Pekko Pod 1</text>
+        <h2>Deep Dive Comparison</h2>
 
-                <rect x="270" y="120" width="80" height="40" rx="4" fill="#e45e5e" />
-                <text x="310" y="145" fill="white" text-anchor="middle" font-size="14">Pekko Pod 2</text>
+        <div class="grid-2">
+            <!-- Kubernetes Approach -->
+            <div class="card">
+                <h3>Option A: Kubernetes API (Native)</h3>
+                <p class="text-muted">Nodes query the Kubernetes API server directly to find the IP addresses of other pods matching a specific label selector.</p>
 
-                <path d="M100 120 L180 60" stroke="#666" stroke-width="2" marker-end="url(#arrow)" />
-                <path d="M300 120 L220 60" stroke="#666" stroke-width="2" marker-end="url(#arrow)" />
-
-                <path d="M130 140 L270 140" stroke="#e45e5e" stroke-width="2" stroke-dasharray="5,5" />
-                <text x="200" y="135" fill="#666" text-anchor="middle" font-size="12">Gossip</text>
-
-                <defs>
-                    <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#666" />
-                    </marker>
-                </defs>
-            </svg>
-
-            <div class="tabs-container">
-                <div class="tabs">
-                    <div class="tab active" onclick="switchTab(this, 'k8s-conf')">application.conf</div>
-                    <div class="tab" onclick="switchTab(this, 'k8s-rbac')">rbac.yaml</div>
+                <div class="tags">
+                    <span class="tag pro">Zero Extra Infra</span>
+                    <span class="tag pro">Fast Discovery</span>
+                    <span class="tag pro">Cloud Native</span>
+                    <span class="tag con">K8s Vendor Lock-in</span>
+                    <span class="tag con">Requires RBAC config</span>
                 </div>
-                <div id="k8s-conf" class="tab-content active">
-<pre><code>pekko.management {
+
+                <div class="diagram-container">
+                    <div id="k8s-tooltip" class="tooltip"></div>
+                    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Background -->
+                        <rect x="0" y="0" width="400" height="200" fill="#f8fafc" rx="8" />
+
+                        <!-- K8s API -->
+                        <g class="svg-node" onmousemove="showTooltip(event, 'k8s-tooltip', 'Kubernetes Control Plane API Server. Provides pod IPs.')" onmouseout="hideTooltip('k8s-tooltip')">
+                            <rect x="140" y="20" width="120" height="40" rx="6" fill="#326ce5" />
+                            <text x="200" y="45" fill="white" text-anchor="middle" font-size="12" font-weight="bold" font-family="sans-serif">K8s API Server</text>
+                        </g>
+
+                        <!-- Pods -->
+                        <g class="svg-node" onmousemove="showTooltip(event, 'k8s-tooltip', 'Pod 1: Queries API on startup, receives [IP1, IP2], joins cluster.')" onmouseout="hideTooltip('k8s-tooltip')">
+                            <rect x="50" y="130" width="100" height="40" rx="6" fill="#e45e5e" stroke="#b91c1c" stroke-width="2" />
+                            <text x="100" y="155" fill="white" text-anchor="middle" font-size="12" font-weight="bold" font-family="sans-serif">Pekko Node 1</text>
+                        </g>
+
+                        <g class="svg-node" onmousemove="showTooltip(event, 'k8s-tooltip', 'Pod 2: Queries API on startup, receives [IP1, IP2], joins cluster.')" onmouseout="hideTooltip('k8s-tooltip')">
+                            <rect x="250" y="130" width="100" height="40" rx="6" fill="#e45e5e" stroke="#b91c1c" stroke-width="2" />
+                            <text x="300" y="155" fill="white" text-anchor="middle" font-size="12" font-weight="bold" font-family="sans-serif">Pekko Node 2</text>
+                        </g>
+
+                        <!-- Lines -->
+                        <path d="M100 130 L180 60" stroke="#64748b" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />
+                        <path d="M300 130 L220 60" stroke="#64748b" stroke-width="2" stroke-dasharray="4,4" marker-end="url(#arrow)" />
+
+                        <!-- Gossip Line -->
+                        <path d="M150 150 L250 150" stroke="#b91c1c" stroke-width="2" />
+                        <rect x="175" y="140" width="50" height="20" fill="#f8fafc" />
+                        <text x="200" y="154" fill="#b91c1c" text-anchor="middle" font-size="10" font-weight="bold" font-family="sans-serif">GOSSIP</text>
+
+                        <defs>
+                            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#64748b" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+
+                <details>
+                    <summary>How it works (Startup Flow)</summary>
+                    <div class="details-content">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div><strong>Pod Starts:</strong> Pekko node boots up and checks `application.conf`.</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div><strong>API Query:</strong> Node queries `https://kubernetes.default.svc` for pods with label `app=my-service`.</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div><strong>Resolution:</strong> API server returns a list of Pod IPs.</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">4</div>
+                            <div><strong>Join:</strong> Node selects the lowest IP to send a Join Request, forming the cluster.</div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="code-editor">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab(this, 'k8s-conf')">application.conf</div>
+                        <div class="tab" onclick="switchTab(this, 'k8s-rbac')">rbac.yaml</div>
+                    </div>
+                    <div id="k8s-conf" class="tab-content active">
+<pre><code><span class="token keyword">pekko.management</span> {
   cluster.bootstrap {
     contact-point-discovery {
-      discovery-method = kubernetes-api
-      service-name = "my-pekko-service"
-      required-contact-point-nr = 2
+      <span class="token comment"># Use K8s API for discovery</span>
+      discovery-method = <span class="token string">kubernetes-api</span>
+
+      <span class="token comment"># The label selector to find other pods</span>
+      pod-label-selector = <span class="token string">"app.kubernetes.io/name=my-service"</span>
+
+      required-contact-point-nr = <span class="token keyword">2</span>
     }
   }
 }</code></pre>
-                </div>
-                <div id="k8s-rbac" class="tab-content">
-<pre><code>apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: pod-reader
-rules:
-- apiGroups: [""]
-  resources: ["pods"]
-  verbs: ["get", "watch", "list"]</code></pre>
+                    </div>
+                    <div id="k8s-rbac" class="tab-content">
+<pre><code><span class="token keyword">apiVersion</span>: rbac.authorization.k8s.io/v1
+<span class="token keyword">kind</span>: Role
+<span class="token keyword">metadata</span>:
+  <span class="token keyword">name</span>: pod-reader
+<span class="token keyword">rules</span>:
+- <span class="token keyword">apiGroups</span>: [""]
+  <span class="token keyword">resources</span>: ["pods"]
+  <span class="token keyword">verbs</span>: ["get", "watch", "list"]
+---
+<span class="token comment"># Bind role to default service account</span>
+<span class="token keyword">apiVersion</span>: rbac.authorization.k8s.io/v1
+<span class="token keyword">kind</span>: RoleBinding
+<span class="token keyword">metadata</span>:
+  <span class="token keyword">name</span>: read-pods
+<span class="token keyword">roleRef</span>:
+  <span class="token keyword">kind</span>: Role
+  <span class="token keyword">name</span>: pod-reader</code></pre>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Hazelcast Approach -->
-        <div class="card">
-            <h3>Hazelcast (Alternative)</h3>
-            <p>Uses Hazelcast IMDG for node discovery, useful when not running on K8s or spanning multiple environments.</p>
+            <!-- Hazelcast Approach -->
+            <div class="card">
+                <h3>Option B: Hazelcast (External Registry)</h3>
+                <p class="text-muted">Nodes use Hazelcast IMDG (In-Memory Data Grid) to register themselves and discover peers, forming a ring.</p>
 
-            <div style="margin-bottom: 1rem;">
-                <span class="tag pro">+ Environment agnostic</span>
-                <span class="tag pro">+ Cross-datacenter</span>
-                <span class="tag con">- Heavy dependency</span>
-            </div>
-
-            <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
-                <rect x="50" y="20" width="300" height="160" rx="4" fill="#f8f9fa" stroke="#ddd" />
-
-                <rect x="150" y="40" width="100" height="40" rx="4" fill="#00b0f0" />
-                <text x="200" y="65" fill="white" text-anchor="middle" font-size="14">Hazelcast Ring</text>
-
-                <rect x="80" y="120" width="80" height="40" rx="4" fill="#e45e5e" />
-                <text x="120" y="145" fill="white" text-anchor="middle" font-size="14">Pekko Node A</text>
-
-                <rect x="240" y="120" width="80" height="40" rx="4" fill="#e45e5e" />
-                <text x="280" y="145" fill="white" text-anchor="middle" font-size="14">Pekko Node B</text>
-
-                <path d="M120 120 L180 80" stroke="#666" stroke-width="2" marker-end="url(#arrow)" />
-                <path d="M280 120 L220 80" stroke="#666" stroke-width="2" marker-end="url(#arrow)" />
-
-                <path d="M160 140 L240 140" stroke="#e45e5e" stroke-width="2" stroke-dasharray="5,5" />
-                <text x="200" y="135" fill="#666" text-anchor="middle" font-size="12">Gossip</text>
-            </svg>
-
-            <div class="tabs-container">
-                <div class="tabs">
-                    <div class="tab active" onclick="switchTab(this, 'hz-conf')">application.conf</div>
-                    <div class="tab" onclick="switchTab(this, 'hz-xml')">hazelcast.xml</div>
+                <div class="tags">
+                    <span class="tag pro">Platform Agnostic</span>
+                    <span class="tag pro">Cross-DC Support</span>
+                    <span class="tag pro">Dev-friendly (Multicast)</span>
+                    <span class="tag con">Heavy JVM Dependency</span>
+                    <span class="tag con">Memory Overhead</span>
                 </div>
-                <div id="hz-conf" class="tab-content active">
-<pre><code>pekko.discovery {
-  method = hazelcast
+
+                <div class="diagram-container">
+                    <div id="hz-tooltip" class="tooltip"></div>
+                    <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="0" width="400" height="200" fill="#f8fafc" rx="8" />
+
+                        <!-- Hazelcast Ring -->
+                        <g class="svg-node" onmousemove="showTooltip(event, 'hz-tooltip', 'Hazelcast In-Memory Data Grid Ring. Acts as a distributed registry.')" onmouseout="hideTooltip('hz-tooltip')">
+                            <ellipse cx="200" cy="70" rx="120" ry="40" fill="none" stroke="#00b0f0" stroke-width="4" stroke-dasharray="5,5" />
+                            <rect x="150" y="50" width="100" height="40" rx="6" fill="#00b0f0" />
+                            <text x="200" y="75" fill="white" text-anchor="middle" font-size="12" font-weight="bold" font-family="sans-serif">Hazelcast Grid</text>
+                        </g>
+
+                        <!-- Pods -->
+                        <g class="svg-node" onmousemove="showTooltip(event, 'hz-tooltip', 'Node A registers itself in the Hazelcast grid.')" onmouseout="hideTooltip('hz-tooltip')">
+                            <rect x="50" y="140" width="100" height="40" rx="6" fill="#e45e5e" stroke="#b91c1c" stroke-width="2" />
+                            <text x="100" y="165" fill="white" text-anchor="middle" font-size="12" font-weight="bold" font-family="sans-serif">Pekko Node A</text>
+                        </g>
+
+                        <g class="svg-node" onmousemove="showTooltip(event, 'hz-tooltip', 'Node B registers itself and sees Node A in the grid.')" onmouseout="hideTooltip('hz-tooltip')">
+                            <rect x="250" y="140" width="100" height="40" rx="6" fill="#e45e5e" stroke="#b91c1c" stroke-width="2" />
+                            <text x="300" y="165" fill="white" text-anchor="middle" font-size="12" font-weight="bold" font-family="sans-serif">Pekko Node B</text>
+                        </g>
+
+                        <!-- Lines -->
+                        <path d="M100 140 L160 90" stroke="#00b0f0" stroke-width="2" marker-end="url(#arrow-blue)" />
+                        <path d="M300 140 L240 90" stroke="#00b0f0" stroke-width="2" marker-end="url(#arrow-blue)" />
+
+                        <!-- Gossip Line -->
+                        <path d="M150 160 L250 160" stroke="#b91c1c" stroke-width="2" />
+                        <rect x="175" y="150" width="50" height="20" fill="#f8fafc" />
+                        <text x="200" y="164" fill="#b91c1c" text-anchor="middle" font-size="10" font-weight="bold" font-family="sans-serif">GOSSIP</text>
+
+                        <defs>
+                            <marker id="arrow-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                                <path d="M 0 0 L 10 5 L 0 10 z" fill="#00b0f0" />
+                            </marker>
+                        </defs>
+                    </svg>
+                </div>
+
+                <details>
+                    <summary>How it works (Startup Flow)</summary>
+                    <div class="details-content">
+                        <div class="step">
+                            <div class="step-num">1</div>
+                            <div><strong>Hazelcast Init:</strong> Embedded Hazelcast instance starts within the Pekko JVM.</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">2</div>
+                            <div><strong>Grid Join:</strong> Hazelcast instances discover each other (via Multicast, TCP, or cloud-specific modules) and form a grid.</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">3</div>
+                            <div><strong>Registry Read:</strong> Pekko queries the local Hazelcast grid state to find IP addresses of other Pekko members.</div>
+                        </div>
+                        <div class="step">
+                            <div class="step-num">4</div>
+                            <div><strong>Join:</strong> Node sends Join Request to the lowest IP to form the cluster.</div>
+                        </div>
+                    </div>
+                </details>
+
+                <div class="code-editor">
+                    <div class="tabs">
+                        <div class="tab active" onclick="switchTab(this, 'hz-conf')">application.conf</div>
+                        <div class="tab" onclick="switchTab(this, 'hz-xml')">hazelcast.xml</div>
+                    </div>
+                    <div id="hz-conf" class="tab-content active">
+<pre><code><span class="token keyword">pekko.discovery</span> {
+  method = <span class="token string">hazelcast</span>
   hazelcast {
-    config-file = "hazelcast.xml"
+    config-file = <span class="token string">"hazelcast.xml"</span>
   }
 }
-pekko.management.cluster.bootstrap {
-  contact-point-discovery {
-    discovery-method = hazelcast
+
+<span class="token keyword">pekko.management</span> {
+  cluster.bootstrap.contact-point-discovery {
+    discovery-method = <span class="token string">hazelcast</span>
   }
 }</code></pre>
-                </div>
-                <div id="hz-xml" class="tab-content">
-<pre><code>&lt;hazelcast&gt;
-  &lt;network&gt;
-    &lt;port auto-increment="true"&gt;5701&lt;/port&gt;
-    &lt;join&gt;
-      &lt;multicast enabled="true"/&gt;
-    &lt;/join&gt;
-  &lt;/network&gt;
-&lt;/hazelcast&gt;</code></pre>
+                    </div>
+                    <div id="hz-xml" class="tab-content">
+<pre><code><span class="token keyword">&lt;hazelcast&gt;</span>
+  <span class="token keyword">&lt;network&gt;</span>
+    <span class="token keyword">&lt;port</span> auto-increment="true"<span class="token keyword">&gt;</span>5701<span class="token keyword">&lt;/port&gt;</span>
+    <span class="token keyword">&lt;join&gt;</span>
+      <span class="token comment">&lt;!-- Use Multicast for local dev --&gt;</span>
+      <span class="token keyword">&lt;multicast</span> enabled="true"<span class="token keyword">/&gt;</span>
+      <span class="token comment">&lt;!-- Or TCP-IP for prod --&gt;</span>
+      <span class="token keyword">&lt;tcp-ip</span> enabled="false"<span class="token keyword">&gt;</span>
+        <span class="token keyword">&lt;member-list&gt;</span>
+          <span class="token keyword">&lt;member&gt;</span>machine1<span class="token keyword">&lt;/member&gt;</span>
+        <span class="token keyword">&lt;/member-list&gt;</span>
+      <span class="token keyword">&lt;/tcp-ip&gt;</span>
+    <span class="token keyword">&lt;/join&gt;</span>
+  <span class="token keyword">&lt;/network&gt;</span>
+<span class="token keyword">&lt;/hazelcast&gt;</span></code></pre>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <h2>Decision Matrix</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Criteria</th>
+                    <th>Kubernetes API</th>
+                    <th>Hazelcast</th>
+                    <th>Winner</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Infrastructure Dependencies</strong></td>
+                    <td>Relies on K8s API server (already exists)</td>
+                    <td>Self-contained but requires Hazelcast jar overhead</td>
+                    <td><strong>Kubernetes API</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Local Development</strong></td>
+                    <td>Harder. Requires minikube or config overrides</td>
+                    <td>Easy. Just works via multicast on localhost</td>
+                    <td><strong>Hazelcast</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Security / Auth</strong></td>
+                    <td>Requires specific Kubernetes RBAC roles</td>
+                    <td>Requires configuring Hazelcast network security</td>
+                    <td><strong>Tie</strong></td>
+                </tr>
+                <tr>
+                    <td><strong>Multi-DC / Hybrid Cloud</strong></td>
+                    <td>Impossible/Complex (unless using K8s Federation)</td>
+                    <td>Native support via Hazelcast WAN replication</td>
+                    <td><strong>Hazelcast</strong></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <script>
         function switchTab(clickedTab, contentId) {
-            const container = clickedTab.closest('.tabs-container');
+            const container = clickedTab.closest('.code-editor');
 
             container.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
             container.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
 
             clickedTab.classList.add('active');
             container.querySelector('#' + contentId).classList.add('active');
+        }
+
+        function showTooltip(e, tooltipId, text) {
+            const tooltip = document.getElementById(tooltipId);
+            tooltip.textContent = text;
+            tooltip.style.opacity = 1;
+
+            const containerRect = tooltip.closest('.diagram-container').getBoundingClientRect();
+
+            tooltip.style.left = (e.clientX - containerRect.left + 15) + 'px';
+            tooltip.style.top = (e.clientY - containerRect.top + 15) + 'px';
+        }
+
+        function hideTooltip(tooltipId) {
+            document.getElementById(tooltipId).style.opacity = 0;
         }
     </script>
 </body>
